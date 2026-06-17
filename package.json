@@ -1,6 +1,7 @@
 {
   "name": "rescue-hub",
   "private": false,
+  "homepage": "https://rescue-hub-beta.vercel.app/",
   "version": "2.2.1",
   "type": "module",
   "scripts": {

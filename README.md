@@ -9,10 +9,11 @@
 
 RescueHub is a project used to explore client-side local-first state persistence, workflow state machine validation, and responsive administrative telemetry through a working dashboard built with React, TypeScript, and Zustand.
 
-The project is a personal architectural study focused on client-side state isolation and strict schema constraints rather than a commercial production deployment.
+🔗 **Live Demo:** [https://rescue-hub-beta.vercel.app/](https://rescue-hub-beta.vercel.app/)
 
 ![Project Status: Active](https://img.shields.io/badge/Project%20Status-Active-brightgreen?style=for-the-badge&logo=github)
 ![Current Version](https://img.shields.io/badge/Version-v0.5.0--beta-electriccyan?style=for-the-badge)
+[![Live Demo](https://img.shields.io/badge/Demo-Live-success?style=for-the-badge)](https://rescue-hub-beta.vercel.app/)
 
 ---
 
