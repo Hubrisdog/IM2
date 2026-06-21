@@ -54,20 +54,25 @@ To design and implement a responsive, offline-resilient Case Tracking and Medica
 #### 1.3 Scope and Limitation
 
 ##### 1.3.1 Scope
-* **Incident Reports:** Citizen-submitted entries logging reporter contact info, incident description, date, severity, and geolocational coordinates.
-* **Rescue Cases:** Dispatch tracking covering assignments, notes, and lifecycle state management.
-* **Animals Register:** Profile index tracking color, breed, estimated age, condition, photos, and current housing shelter.
-* **Rescuers Roster:** Roster mapping responder details, skills list, and availability states.
-* **Shelters Database:** Configuration of bed capacities, contact persons, and computed occupancy ratios.
-* **Medical Treatments:** Logging diagnostics, procedures, veterinarian names, medications, and follow-up schedules.
-* **Operational Telemetry:** CSV export engines and dashboard metrics.
+The system tracks the progress of the animal rescue project, specifically monitoring incident reports, rescue cases, shelter capacities, and veterinary care logs.
+
+**Scope of initial release**
+* **Focus on reading/modifying existing project documents:** Users can view, search, and update active rescue cases, animal registers, and medical logs.
+* **Time stamps, version control:** Every state change, assignment, or status update dynamically records timestamps and logs changes in the append-only `activityLogs` audit system.
+* **Very simple menu-based interface:** Navigation is handled through a straightforward, responsive sidebar menu.
+
+**Scope of subsequent releases**
+* **Improve interface:** Integrate advanced dashboard cards, customizable layout themes, and real-time mapping dashboards.
+* **Add capability to originate new projects:** Enable dispatchers to create fresh case logs directly or promote incoming citizen incident reports.
+* **Add user privilege functionality:** Implement Role-Based Access Control (RBAC) to differentiate permissions between Admin, Dispatcher, Rescuer, and Vet.
+* **Allow personnel assignments:** Allow dispatchers to assign field rescuers and select housing shelters for specific rescue cases.
 
 ##### 1.3.2 Limitation
-<what can’t your system do and why? i.e. the system can only record payment but not process it. >
+The system records operational case reports, medical treatments, and shelter capacities, but it cannot process payments or active financial transactions.
 
-Limitations and exclusions
-* The system will be coupled with the home office database only
-* The system will not replace any existing communication modes, e.g., email
+**Limitations and exclusions**
+* **The system will be coupled with the home office database only:** The data store will communicate exclusively with the centralized organization database.
+* **The system will not replace any existing communication modes, e.g., email:** Standard operations will still rely on existing tools like email or phone calls for real-time alerts.
 
 ---
 
