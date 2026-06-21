@@ -63,9 +63,11 @@ To design and implement a responsive, offline-resilient Case Tracking and Medica
 * **Operational Telemetry:** CSV export engines and dashboard metrics.
 
 ##### 1.3.2 Limitation
-* **Local-First Client Sandbox:** Database records are persisted locally inside the user's browser storage. There is no active remote database cluster linked in this MVP phase (Supabase migration is on the roadmap).
-* **Mock Geolocation API:** The Google Maps panel simulates coordinates plotting without calling external billing endpoints.
-* **Mock Auth Session:** The security layer uses client-side session tokens in cookies.
+<what can’t your system do and why? i.e. the system can only record payment but not process it. >
+
+Limitations and exclusions
+* The system will be coupled with the home office database only
+* The system will not replace any existing communication modes, e.g., email
 
 ---
 
