@@ -6,6 +6,7 @@ import { Link, useNavigate } from '@tanstack/react-router'
 import { Loader2, LogIn } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/auth-store'
+import { useRescueHubStore } from '@/stores/rescue-hub-store'
 import { sleep, cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -53,22 +54,34 @@ export function UserAuthForm({
   function onSubmit(data: z.infer<typeof formSchema>) {
     setIsLoading(true)
 
-    toast.promise(sleep(2000), {
+    const loginPromise = fetch('http://localhost:5000/api/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        email: data.email,
+        password: data.password
+      })
+    }).then(async (res) => {
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.message || 'Invalid email or password')
+      }
+      return res.json()
+    })
+
+    toast.promise(loginPromise, {
       loading: 'Signing in...',
-      success: () => {
+      success: (payload) => {
         setIsLoading(false)
 
-        // Mock successful authentication with expiry computed at success time
-        const mockUser = {
-          accountNo: 'ACC001',
-          email: data.email,
-          role: ['user'],
-          exp: Date.now() + 24 * 60 * 60 * 1000, // 24 hours from now
-        }
-
         // Set user and access token
-        auth.setUser(mockUser)
-        auth.setAccessToken('mock-access-token')
+        auth.setUser(payload.user)
+        auth.setAccessToken(payload.accessToken)
+
+        // Trigger initial data load in the background
+        useRescueHubStore.getState().fetchInitialData()
 
         // Redirect to the stored location or default to dashboard
         const targetPath = redirectTo || '/'
@@ -76,31 +89,53 @@ export function UserAuthForm({
 
         return `Welcome back, ${data.email}!`
       },
-      error: 'Error',
+      error: (err: any) => {
+        setIsLoading(false)
+        return err.message || 'Error occurred during login.'
+      },
     })
   }
 
   const handleDemoLogin = () => {
     form.setValue('email', 'admin@rescuehub.org')
-    form.setValue('password', 'password123')
+    form.setValue('password', 'admin123')
 
     setIsLoading(true)
-    toast.promise(sleep(1000), {
+
+    const demoPromise = fetch('http://localhost:5000/api/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        email: 'admin@rescuehub.org',
+        password: 'admin123'
+      })
+    }).then(async (res) => {
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.message || 'Invalid credentials')
+      }
+      return res.json()
+    })
+
+    toast.promise(demoPromise, {
       loading: 'Autofilling & Logging in...',
-      success: () => {
+      success: (payload) => {
         setIsLoading(false)
-        const mockUser = {
-          accountNo: 'ACC001',
-          email: 'admin@rescuehub.org',
-          role: ['admin'],
-          exp: Date.now() + 24 * 60 * 60 * 1000,
-        }
-        auth.setUser(mockUser)
-        auth.setAccessToken('mock-access-token')
+        auth.setUser(payload.user)
+        auth.setAccessToken(payload.accessToken)
+
+        // Trigger initial data load in the background
+        useRescueHubStore.getState().fetchInitialData()
+
         navigate({ to: redirectTo || '/', replace: true })
         return 'Welcome to RescueHub Demo!'
       },
-      error: 'Error'
+      error: (err: any) => {
+        setIsLoading(false)
+        return err.message || 'Error occurred during login.'
+      }
     })
   }
 
