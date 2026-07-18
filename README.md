@@ -29,7 +29,7 @@
 1. [Executive Summary & Rationale](#-executive-summary--rationale)
 2. [General & Specific Objectives](#-general--specific-objectives)
 3. [System Architecture & Tech Stack](#-system-architecture--tech-stack)
-4. [Core Features & Functional Modules](#-core-features--functional-modules)
+4. [Functional Requirements (Paper Section 2.5)](#-functional-requirements-paper-section-25)
 5. [Database Schema & ERD](#-database-schema--erd)
 6. [SQL Benchmark Queries (Paper Section 2.4)](#-sql-benchmark-queries-paper-section-24)
 7. [Access & Security Controls (RBAC)](#-access--security-controls-rbac)
@@ -85,32 +85,37 @@ graph TD
 
 ---
 
-## ✨ Core Features & Functional Modules
+## 📋 2.5 Functional Requirements (Paper Section 2.5)
 
-### 1. Citizen Incident Reporting Portal (`/report-incident`)
-* Publicly accessible form allowing citizens to report distressed animals.
-* Captures reporter details, species, estimated severity (`Low`, `Medium`, `High`, `Critical`), location, landmark descriptions, and photo uploads.
-* Supports anonymous reporting option for user privacy.
+### 2.5.1 Citizen Emergency Incident Reporting Subsystem (Public Portal)
+* **FR-1.1 Incident Data Capture:** The system shall allow public users (citizens) to submit emergency incident reports by inputting the reporter's name, contact phone number, animal species (Dog, Cat, Bird, Other), estimated severity level (`Low`, `Medium`, `High`, `Critical`), geographic location/address, landmark description, and optional photo file uploads.
+* **FR-1.2 Interactive Map Location Pinning:** The system shall provide an interactive map interface allowing users to pin geographic coordinates (latitude and longitude) or select pre-defined municipal landmarks.
+* **FR-1.3 Anonymous Incident Submissions:** The system shall permit users to toggle anonymous reporting, withholding reporter contact details while still queuing the incident for emergency dispatch review.
+* **FR-1.4 Submission Confirmation:** Upon successful submission, the system shall generate a unique incident tracking reference and display a clear confirmation notification to the reporter.
 
-### 2. Dispatch & Case Management Console (`/rescue-cases`)
-* Verification queue for dispatchers to promote citizen reports into formal Rescue Cases (`RC-2026-XXXX`).
-* Sequential status lifecycle enforcement: `REPORTED` ➔ `ASSIGNED` ➔ `EN_ROUTE` ➔ `RESCUED` ➔ `SHELTER_INTAKE` ➔ `UNDER_TREATMENT` ➔ `RECOVERED` ➔ `ADOPTED`/`RELEASED`.
-* Dynamic **Rescue Case Journey Timeline** modal displaying an append-only audit trail of every update, assignment, and status transition.
+### 2.5.2 Emergency Dispatch & Case Lifecycle Subsystem
+* **FR-2.1 Incident Queue & Review:** The system shall display incoming public incident reports in a centralized dispatcher queue sorted chronologically and prioritized by severity.
+* **FR-2.2 Incident Verification & Promotion:** The system shall enable authorized dispatchers to review pending incident reports and promote valid reports into formal Rescue Cases (`RC-2026-XXXX`).
+* **FR-2.3 Responder & Shelter Assignment:** The system shall allow dispatchers to assign active field rescue teams (or individual rescuers) and designate target housing shelters to specific rescue cases.
+* **FR-2.4 Lifecycle Status Progression:** The system shall strictly enforce sequential case status transitions through the operational pipeline: `REPORTED` ➔ `ASSIGNED` ➔ `EN_ROUTE` ➔ `RESCUED` ➔ `SHELTER_INTAKE` ➔ `UNDER_TREATMENT` ➔ `RECOVERED` ➔ `ADOPTED`/`RELEASED`.
+* **FR-2.5 Rescue Journey Audit Timeline:** The system shall render a vertical, chronological timeline for every rescue case, displaying all status updates, responder reassignments, and notes along with timestamps and user attribution.
 
-### 3. Digital Animals Register & Photo Management (`/animals`)
-* Centralized registry of all admitted animals detailing species, breed, sex, age estimate, weight, physical condition, and shelter assignment.
-* Integrated base64 photo preview and file upload pipeline indexed directly to MySQL records.
+### 2.5.3 Animal Intake & Shelter Capacity Allocation Subsystem
+* **FR-3.1 Digital Animal Profile Registration:** The system shall allow shelter intake staff to register admitted animals with detailed attributes including name, species, breed, sex, estimated age, weight (kg), physical condition assessment, admission date, and primary photo.
+* **FR-3.2 Real-Time Capacity Calculation:** The system shall continuously calculate and display total, occupied, and available bed capacities for all registered shelter facilities using live database queries (`Available Beds = Total Capacity - Occupied Beds`).
+* **FR-3.3 Overcrowding Threshold Warnings:** The system shall trigger visual warnings (high-occupancy badges) whenever a shelter facility reaches or exceeds **90%** bed capacity utilization.
+* **FR-3.4 Image Storage & Indexing:** The system shall store uploaded animal photos on the server file directory and index relative path references within the MySQL `Animal` table.
 
-### 4. Veterinary Medical Care Subsystem (`/treatments`)
-* Dedicated clinic view for veterinarians to log diagnoses, surgical treatments, administered prescriptions, and follow-up evaluation dates.
+### 2.5.4 Veterinary Medical Care & Treatment Subsystem
+* **FR-4.1 Medical Examination Logging:** The system shall allow authorized veterinarians to create medical care entries tied to specific animal IDs, recording primary diagnosis, surgical/clinical procedures performed, prescribed medications, and clinical notes.
+* **FR-4.2 Follow-Up Checkup Scheduling:** The system shall enable veterinarians to specify future follow-up evaluation dates (`followup_date`) for animals under care.
+* **FR-4.3 Pending Care Alerts:** The system shall track pending follow-up evaluations and highlight animals requiring re-examination on the clinic dashboard.
+* **FR-4.4 Historical Health Records Retrieval:** The system shall maintain a complete historical log of all veterinary interventions per animal, accessible to clinic staff during ongoing rehabilitation.
 
-### 5. Real-Time Shelter Capacity Allocation (`/shelters`)
-* Live monitoring of occupied versus total kennel capacity across shelter facilities.
-* Automatic warning badges triggered when bed occupancy reaches ≥90%.
-
-### 6. Relational Dashboard Analytics & Performance Reports (`/reports`)
-* Primary operational dashboard featuring 8 KPI cards (Active Dispatches, Emergency Cases, Under Care, Available Shelters, Highest Occupancy Shelter).
-* 5-tab performance reporting panel providing aggregated tables for Species Intake, Shelter Occupancies, Case Status Distribution, Vet Workloads, and Adoption Outcomes.
+### 2.5.5 Access Control, Reporting & System Audit Subsystem
+* **FR-5.1 Role-Based Access Control (RBAC):** The system shall restrict interface features and REST API endpoints according to user roles (`Admin`, `Dispatcher`, `Veterinarian`, `Rescuer`, `Guest`).
+* **FR-5.2 Append-Only System Activity Logging:** The system shall automatically record database mutation events (case creation, status updates, treatment entries, record deletions) into an append-only `ActivityLog` table with user identity and ISO timestamps.
+* **FR-5.3 Interactive Dashboard Analytics:** The system shall generate aggregated operational metrics including active emergency cases, animals under treatment, total intake distribution by species, and vet care workload statistics.
 
 ---
 
@@ -156,13 +161,6 @@ WHERE t.priority IN ('Critical', 'High')
   AND t.status NOT IN ('CLOSED', 'ADOPTED', 'RELEASED')
 ORDER BY t.created_at DESC;
 ```
-* **Sample Output:**
-| case_id | case_number | severity | case_status | location | assigned_rescuer | target_shelter | dispatched_at |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| `2` | `RC-2026-0002` | `Critical` | `UNDER_TREATMENT` | Highway 101, Mile Marker 45 | Admin User | Green Valley Sanctuary | 2026-07-15 08:30:00 |
-| `6` | `RC-2026-0006` | `High` | `ASSIGNED` | 123 Talamban Rd, Cebu | Alice Green | Northside Animal Refuge | 2026-07-17 10:15:00 |
-
----
 
 ### Query 2: Live Shelter Bed Capacity Utilization
 ```sql
@@ -179,113 +177,6 @@ LEFT JOIN Animal an ON s.id = an.shelter_id
 GROUP BY s.id, s.shelter_name, s.capacity
 ORDER BY occupancy_percentage DESC;
 ```
-* **Sample Output:**
-| shelter_id | shelter_name | total_beds | occupied_beds | available_beds | occupancy_percentage |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| `1` | Safe Haven Shelter | 25 | 22 | 3 | 88.0% |
-| `2` | Green Valley Sanctuary | 30 | 18 | 12 | 60.0% |
-| `3` | Northside Animal Refuge | 20 | 8 | 12 | 40.0% |
-
----
-
-### Query 3: Species Intake Distribution Report
-```sql
-SELECT 
-    sp.species_name,
-    COUNT(a.id) AS total_admitted,
-    SUM(CASE WHEN a.status = 'Intake' THEN 1 ELSE 0 END) AS in_intake,
-    SUM(CASE WHEN a.status = 'Under Treatment' THEN 1 ELSE 0 END) AS under_care,
-    SUM(CASE WHEN a.status = 'Adopted' THEN 1 ELSE 0 END) AS adopted_out,
-    SUM(CASE WHEN a.status = 'Released' THEN 1 ELSE 0 END) AS released_wild
-FROM Species sp
-LEFT JOIN Animal a ON sp.id = a.species_id
-GROUP BY sp.id, sp.species_name
-ORDER BY total_admitted DESC;
-```
-* **Sample Output:**
-| species_name | total_admitted | in_intake | under_care | adopted_out | released_wild |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| Dog | 45 | 12 | 8 | 20 | 5 |
-| Cat | 32 | 9 | 5 | 15 | 3 |
-| Bird | 8 | 1 | 2 | 0 | 5 |
-
----
-
-### Query 4: Medical Treatment Workload by Veterinarian
-```sql
-SELECT 
-    CONCAT(ag.first_name, ' ', ag.last_name) AS veterinarian_name,
-    COUNT(at.id) AS total_treatments_logged,
-    COUNT(DISTINCT at.animal_id) AS unique_patients_treated,
-    SUM(CASE WHEN at.followup_date >= CURDATE() THEN 1 ELSE 0 END) AS pending_followups
-FROM Agent ag
-INNER JOIN Role r ON ag.role_id = r.id
-LEFT JOIN Animal_Treatment at ON ag.id = at.vet_agent_id
-WHERE r.role_name IN ('Veterinarian', 'Admin')
-GROUP BY ag.id, ag.first_name, ag.last_name
-ORDER BY total_treatments_logged DESC;
-```
-* **Sample Output:**
-| veterinarian_name | total_treatments_logged | unique_patients_treated | pending_followups |
-| :--- | :--- | :--- | :--- |
-| Dr. Alice Vance | 18 | 14 | 3 |
-| Dr. Marcus Wright | 12 | 10 | 1 |
-
----
-
-### Query 5: Full Rescue Journey Audit Logs for Specific Case
-```sql
-SELECT 
-    al.id AS log_id,
-    al.timestamp,
-    al.entity_type,
-    al.entity_id,
-    al.action,
-    al.user AS performed_by
-FROM ActivityLog al
-WHERE (al.entity_type = 'RescueCase' AND al.entity_id = 2)
-   OR (al.entity_type = 'IncidentReport' AND al.entity_id = 1)
-   OR (al.entity_type = 'Animal' AND al.entity_id = 2)
-ORDER BY al.timestamp ASC;
-```
-* **Sample Output:**
-| log_id | timestamp | entity_type | entity_id | action | performed_by |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| `101` | 2026-07-15 08:00:00 | IncidentReport | 1 | Incident report submitted by Citizen | Citizen Reporter |
-| `104` | 2026-07-15 08:15:00 | RescueCase | 2 | Case RC-2026-0002 created & assigned | Dispatcher |
-| `108` | 2026-07-15 09:30:00 | Animal | 2 | Animal 'Dino' admitted to shelter | Rescuer |
-| `112` | 2026-07-15 11:00:00 | Treatment | 1 | Antibiotic treatment & fracture cast applied | Veterinarian |
-
----
-
-### Query 6: Citizen Incident Queue Pending Verification
-```sql
-SELECT 
-    ir.id AS incident_id,
-    ir.reporter_name,
-    ir.contact_number,
-    sp.species_name,
-    ir.severity,
-    ir.location,
-    ir.description,
-    ir.created_at AS reported_at
-FROM Incident_Report ir
-INNER JOIN Species sp ON ir.species_id = sp.id
-WHERE ir.status = 'Pending'
-ORDER BY 
-    CASE ir.severity 
-        WHEN 'Critical' THEN 1 
-        WHEN 'High' THEN 2 
-        WHEN 'Medium' THEN 3 
-        WHEN 'Low' THEN 4 
-    END,
-    ir.created_at ASC;
-```
-* **Sample Output:**
-| incident_id | reporter_name | contact_number | species_name | severity | location | reported_at |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| `5` | John Smith | 09171234567 | Dog | Critical | Talamban Highway | 2026-07-17 09:30:00 |
-| `6` | Anonymous | N/A | Cat | Medium | IT Park Bldg 2 | 2026-07-17 10:15:00 |
 
 ---
 
@@ -304,19 +195,6 @@ ORDER BY
 | **Manage Shelters & Rescuers Roster** | ❌ | ❌ | ❌ | ✅ | ✅ |
 | **Delete Records Across System** | ❌ | ❌ | ❌ | ❌ | ✅ |
 | **View Full Activity Audit Logs** | ❌ | ❌ | ❌ | ❌ | ✅ |
-
-### Database Privileges (MySQL DCL)
-```sql
--- 1. Create Application Database User
-CREATE USER 'rescuehub_app'@'localhost' IDENTIFIED BY 'SecureAppPass2026!';
-GRANT SELECT, INSERT, UPDATE, DELETE ON rescuehub_db.* TO 'rescuehub_app'@'localhost';
-
--- 2. Create Read-Only Reporting User for Analytics
-CREATE USER 'rescuehub_analytics'@'localhost' IDENTIFIED BY 'ReadOnlyAnalytics2026!';
-GRANT SELECT ON rescuehub_db.* TO 'rescuehub_analytics'@'localhost';
-
-FLUSH PRIVILEGES;
-```
 
 ---
 
