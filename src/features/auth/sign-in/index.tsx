@@ -30,6 +30,17 @@ export function SignIn() {
         </CardHeader>
         <CardContent className='relative z-10'>
           <UserAuthForm redirectTo={redirect} />
+          
+          <div className='relative flex items-center my-3'>
+            <span className='w-full border-t border-teal-500/10' />
+          </div>
+
+          <a
+            href='/report-incident'
+            className='w-full flex items-center justify-center gap-2 h-10 px-4 rounded-md border border-teal-500/20 bg-teal-500/5 text-teal-600 dark:text-teal-400 hover:bg-teal-500/10 shadow-sm text-sm font-semibold transition-colors'
+          >
+            📢 Report an Incident (No Login Required)
+          </a>
         </CardContent>
         <CardFooter className='pb-6 relative z-10'>
           <p className='w-full text-center text-xs text-muted-foreground leading-relaxed'>

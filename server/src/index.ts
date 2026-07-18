@@ -3,6 +3,8 @@ import cors from 'cors'
 import * as dotenv from 'dotenv'
 import apiRouter from './routes/api'
 
+import path from 'path'
+
 dotenv.config()
 
 const app = express()
@@ -14,7 +16,10 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }))
 
-app.use(express.json())
+app.use(express.json({ limit: '10mb' }))
+
+// Serve static uploads
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')))
 
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`)

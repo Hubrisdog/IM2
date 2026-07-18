@@ -17,7 +17,7 @@ function ClerkAuthLayout() {
           to='/'
           className='relative z-20 flex items-center text-lg font-medium'
         >
-          <Logo className='me-2' />
+          <Logo className='me-2 text-teal-600 dark:text-teal-400' />
           Shadcn Admin
         </Link>
 

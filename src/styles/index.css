@@ -36,6 +36,20 @@
       font-size: 16px !important;
     }
   }
+
+  /* Dropdown contrast compatibility in dark mode */
+  select, option {
+    background-color: var(--card);
+    color: var(--foreground);
+  }
+  .dark select, .dark option {
+    background-color: hsl(222, 45%, 7.5%) !important;
+    color: hsl(215, 30%, 98%) !important;
+  }
+  .warm select, .warm option {
+    background-color: hsl(30, 25%, 99%) !important;
+    color: hsl(30, 15%, 15%) !important;
+  }
 }
 
 @utility container {

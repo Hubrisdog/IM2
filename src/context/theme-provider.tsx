@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, useMemo } from 'react'
 import { getCookie, setCookie, removeCookie } from '@/lib/cookies'
 
-type Theme = 'dark' | 'light' | 'system'
+type Theme = 'dark' | 'light' | 'warm' | 'system'
 type ResolvedTheme = Exclude<Theme, 'system'>
 
 const DEFAULT_THEME = 'system'
@@ -57,7 +57,7 @@ export function ThemeProvider({
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
 
     const applyTheme = (currentResolvedTheme: ResolvedTheme) => {
-      root.classList.remove('light', 'dark') // Remove existing theme classes
+      root.classList.remove('light', 'dark', 'warm') // Remove existing theme classes
       root.classList.add(currentResolvedTheme) // Add the new theme class
     }
 

@@ -1,4 +1,5 @@
 import { useRescueHubStore } from '@/stores/rescue-hub-store'
+import { Link } from '@tanstack/react-router'
 import {
   Card,
   CardContent,
@@ -22,6 +23,9 @@ import {
   HeartPulse,
   Clock,
   ClipboardList,
+  ShieldAlert,
+  Stethoscope,
+  AlertTriangle,
 } from 'lucide-react'
 
 export function Dashboard() {
@@ -52,6 +56,22 @@ export function Dashboard() {
   )
   const totalOccupancy = activeAnimalsInShelters.length
   const occupancyRate = totalCapacity > 0 ? Math.round((totalOccupancy / totalCapacity) * 100) : 0
+
+  // Extra dashboard stats
+  const underTreatmentCount = animals.filter((a) => a.status === 'Under Treatment').length
+  const emergencyCasesCount = cases.filter((c) => c.status !== 'CLOSED' && (c.severity === 'Critical' || c.severity === 'High')).length
+  
+  const shelterOccupancyRates = shelters.map((s) => {
+    const occ = animals.filter(
+      (a) => a.shelter_id === s.id && a.status !== 'Adopted' && a.status !== 'Released'
+    ).length
+    const pct = s.capacity > 0 ? (occ / s.capacity) * 100 : 0
+    return { name: s.name, pct: Math.round(pct), occ, cap: s.capacity }
+  })
+  
+  const highestOccupancy = shelterOccupancyRates.length > 0
+    ? shelterOccupancyRates.reduce((max, curr) => curr.pct > max.pct ? curr : max, { name: 'None', pct: 0, occ: 0, cap: 0 })
+    : { name: 'None', pct: 0, occ: 0, cap: 0 }
 
   // Average time to close (mocked + calculated)
   const closedCases = cases.filter((c) => c.status === 'CLOSED')
@@ -90,7 +110,7 @@ export function Dashboard() {
           </TabsList>
           <TabsContent value='overview' className='space-y-4'>
             {/* Primary KPI Grid */}
-            <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5'>
+            <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'>
               {/* Active Cases */}
               <Card>
                 <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
@@ -109,6 +129,42 @@ export function Dashboard() {
                 </CardContent>
               </Card>
 
+              {/* Emergency Cases */}
+              <Card>
+                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                  <CardTitle className='text-sm font-medium'>
+                    Emergency Cases
+                  </CardTitle>
+                  <ShieldAlert className='h-4 w-4 text-red-500' />
+                </CardHeader>
+                <CardContent>
+                  <div className='text-2xl font-bold text-red-500'>
+                    {emergencyCasesCount}
+                  </div>
+                  <p className='text-xs text-muted-foreground mt-1'>
+                    Critical & High severity dispatches
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Under Treatment */}
+              <Card>
+                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                  <CardTitle className='text-sm font-medium'>
+                    Under Treatment
+                  </CardTitle>
+                  <Stethoscope className='h-4 w-4 text-rose-500' />
+                </CardHeader>
+                <CardContent>
+                  <div className='text-2xl font-bold'>
+                    {underTreatmentCount}
+                  </div>
+                  <p className='text-xs text-muted-foreground mt-1'>
+                    Active veterinary cases in clinic
+                  </p>
+                </CardContent>
+              </Card>
+
               {/* Shelter Occupancy */}
               <Card>
                 <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
@@ -123,6 +179,24 @@ export function Dashboard() {
                   </div>
                   <p className='text-xs text-muted-foreground mt-1'>
                     {occupancyRate}% overall capacity utilized
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Highest Occupancy Shelter */}
+              <Card>
+                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                  <CardTitle className='text-sm font-medium'>
+                    Highest Load Shelter
+                  </CardTitle>
+                  <AlertTriangle className='h-4 w-4 text-amber-500' />
+                </CardHeader>
+                <CardContent>
+                  <div className='text-2xl font-bold truncate' title={highestOccupancy.name}>
+                    {highestOccupancy.pct}%
+                  </div>
+                  <p className='text-xs text-muted-foreground mt-1 truncate'>
+                    {highestOccupancy.name} ({highestOccupancy.occ}/{highestOccupancy.cap} beds)
                   </p>
                 </CardContent>
               </Card>
@@ -206,7 +280,13 @@ export function Dashboard() {
                       Chronological log of operations in the system.
                     </CardDescription>
                   </div>
-                  <ClipboardList className='h-5 w-5 text-muted-foreground' />
+                  <Link
+                    to='/audit-logs'
+                    title='View Full Audit Logs'
+                    className='p-2 rounded-lg hover:bg-teal-500/10 text-muted-foreground hover:text-teal-600 dark:hover:text-teal-400 transition-all duration-200 shrink-0'
+                  >
+                    <ClipboardList className='h-5 w-5' />
+                  </Link>
                 </CardHeader>
                 <CardContent>
                   <RecentSales />

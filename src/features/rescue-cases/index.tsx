@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useRescueHubStore, type RescueCase, type RescueCaseStatusType, type SeverityType, VALID_CASE_TRANSITIONS } from '@/stores/rescue-hub-store'
+import { useAuthStore } from '@/stores/auth-store'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -21,11 +22,12 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
-import { Plus, Search, Edit2, Trash2, ShieldAlert, MapPin } from 'lucide-react'
+import { Plus, Search, Edit2, Trash2, ShieldAlert, MapPin, Clock } from 'lucide-react'
 import { MockMapView } from '@/components/mock-map-view'
 
 export function RescueCases() {
   const store = useRescueHubStore()
+  const userRole = useAuthStore((state) => state.auth.user?.role?.[0] || 'Rescuer')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
 
@@ -37,6 +39,30 @@ export function RescueCases() {
   const [mapTarget, setMapTarget] = useState<'add' | 'edit'>('add')
 
   const [selectedCase, setSelectedCase] = useState<RescueCase | null>(null)
+
+  // Timeline calculations
+  const caseLogs = selectedCase
+    ? store.activityLogs.filter(
+        (log) =>
+          (log.entity_type === 'RescueCase' && log.entity_id === selectedCase.id) ||
+          (selectedCase.incident_id && log.entity_type === 'IncidentReport' && log.entity_id === selectedCase.incident_id) ||
+          (selectedCase.animal_id && log.entity_type === 'Animal' && log.entity_id === selectedCase.animal_id) ||
+          (log.entity_type === 'Treatment' && store.treatments.some((t) => t.id === log.entity_id && t.animal_id === selectedCase.animal_id))
+      )
+    : []
+
+  const sortedLogs = [...caseLogs].sort((a, b) => new Date(a.timestamp || 0).getTime() - new Date(b.timestamp || 0).getTime())
+
+  const formatLogTime = (ts: any) => {
+    if (!ts) return 'Unknown date'
+    const d = new Date(ts)
+    if (isNaN(d.getTime())) return 'Unknown date'
+    try {
+      return d.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })
+    } catch {
+      return d.toLocaleString()
+    }
+  }
 
   // Add Case Form States
   const [location, setLocation] = useState('')
@@ -84,7 +110,7 @@ export function RescueCases() {
     })
 
     setIsAddOpen(false)
-    toast.success('New Rescue Case registered.')
+    toast.success(`Rescue Case created successfully at ${location}.`)
   }
 
   const handleOpenEdit = (c: RescueCase) => {
@@ -122,7 +148,7 @@ export function RescueCases() {
     }
 
     setIsEditOpen(false)
-    toast.success('Rescue Case updated successfully.')
+    toast.success(`Case ${selectedCase.case_number} updated successfully.`)
   }
 
   const handleOpenDelete = (c: RescueCase) => {
@@ -134,7 +160,7 @@ export function RescueCases() {
     if (!selectedCase) return
     store.deleteCase(selectedCase.id)
     setIsDeleteOpen(false)
-    toast.success('Rescue Case deleted.')
+    toast.success(`Rescue Case ${selectedCase.case_number} deleted.`)
   }
 
   // Filters
@@ -197,9 +223,11 @@ export function RescueCases() {
             Coordinate active dispatches, assign responders and shelters, and track cases through completion.
           </p>
         </div>
-        <Button onClick={handleOpenAdd} className='flex gap-2'>
-          <Plus className='h-4 w-4' /> Register Case
-        </Button>
+        {(userRole === 'Admin' || userRole === 'Dispatcher') && (
+          <Button onClick={handleOpenAdd} className='flex gap-2'>
+            <Plus className='h-4 w-4' /> Register Case
+          </Button>
+        )}
       </div>
 
       {/* Filters */}
@@ -254,7 +282,7 @@ export function RescueCases() {
             {filteredCases.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className='h-24 text-center text-muted-foreground'>
-                  No rescue cases found.
+                  No rescue dispatches logged yet. Click "Register Case" or approve an Incident Report to begin a rescue operation.
                 </TableCell>
               </TableRow>
             ) : (
@@ -284,22 +312,26 @@ export function RescueCases() {
                     </TableCell>
                     <TableCell className='text-right'>
                       <div className='flex items-center justify-end gap-1'>
-                        <Button
-                          variant='ghost'
-                          size='icon'
-                          className='h-8 w-8 text-muted-foreground'
-                          onClick={() => handleOpenEdit(c)}
-                        >
-                          <Edit2 className='h-3.5 w-3.5' />
-                        </Button>
-                        <Button
-                          variant='ghost'
-                          size='icon'
-                          className='h-8 w-8 text-rose-500 hover:bg-rose-500/10 hover:text-rose-500'
-                          onClick={() => handleOpenDelete(c)}
-                        >
-                          <Trash2 className='h-3.5 w-3.5' />
-                        </Button>
+                        {(userRole === 'Admin' || userRole === 'Dispatcher' || userRole === 'Rescuer') && (
+                          <Button
+                            variant='ghost'
+                            size='icon'
+                            className='h-8 w-8 text-muted-foreground'
+                            onClick={() => handleOpenEdit(c)}
+                          >
+                            <Edit2 className='h-3.5 w-3.5' />
+                          </Button>
+                        )}
+                        {userRole === 'Admin' && (
+                          <Button
+                            variant='ghost'
+                            size='icon'
+                            className='h-8 w-8 text-rose-500 hover:bg-rose-500/10 hover:text-rose-500'
+                            onClick={() => handleOpenDelete(c)}
+                          >
+                            <Trash2 className='h-3.5 w-3.5' />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -386,7 +418,7 @@ export function RescueCases() {
 
       {/* Edit Dialog */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className='sm:max-w-lg' onPointerDownOutside={(e) => e.preventDefault()}>
+        <DialogContent className='sm:max-w-4xl' onPointerDownOutside={(e) => e.preventDefault()}>
           {selectedCase && (
             <form onSubmit={handleEditSubmit}>
               <DialogHeader>
@@ -395,127 +427,165 @@ export function RescueCases() {
                   Modify dispatch settings, assign rescuers/shelters, and progress statuses.
                 </DialogDescription>
               </DialogHeader>
-              <div className='grid gap-4 py-4 h-105 overflow-y-auto pr-2'>
-                <div className='space-y-1 bg-amber-500/5 p-3 rounded-lg border border-amber-500/10 text-xs flex flex-col gap-1'>
-                  <span className='font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1'>
-                    <ShieldAlert className='h-3.5 w-3.5' /> Status Workflow Guidelines
-                  </span>
-                  <span>
-                    Cases must flow through sequential stages. The dropdown below restricts choices to valid next states.
-                  </span>
-                </div>
+              
+              <div className='grid grid-cols-1 lg:grid-cols-7 gap-6 py-4'>
+                {/* Left Column: Form Fields */}
+                <div className='lg:col-span-4 space-y-4 h-[480px] overflow-y-auto pr-4 border-r border-border'>
+                  <div className='space-y-1 bg-amber-500/5 p-3 rounded-lg border border-amber-500/10 text-xs flex flex-col gap-1'>
+                    <span className='font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1'>
+                      <ShieldAlert className='h-3.5 w-3.5' /> Status Workflow Guidelines
+                    </span>
+                    <span>
+                      Cases must flow through sequential stages. The dropdown below restricts choices to valid next states.
+                    </span>
+                  </div>
 
-                <div className='grid grid-cols-2 gap-4'>
-                  <div className='space-y-1'>
-                    <span className='text-sm font-medium'>Status</span>
-                    <select
-                      value={editStatus}
-                      onChange={(e) => setEditStatus(e.target.value as RescueCaseStatusType)}
-                      className='flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm'
-                    >
-                      {/* Current Status */}
-                      <option value={selectedCase.status}>{selectedCase.status} (Current)</option>
-                      {/* Valid Next Transitions */}
-                      {VALID_CASE_TRANSITIONS[selectedCase.status]?.map((st) => (
-                        <option key={st} value={st}>
-                          ➔ {st}
-                        </option>
-                      ))}
-                    </select>
+                  <div className='grid grid-cols-2 gap-4'>
+                    <div className='space-y-1'>
+                      <span className='text-sm font-medium'>Status</span>
+                      <select
+                        value={editStatus}
+                        onChange={(e) => setEditStatus(e.target.value as RescueCaseStatusType)}
+                        className='flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm'
+                      >
+                        {/* Current Status */}
+                        <option value={selectedCase.status}>{selectedCase.status} (Current)</option>
+                        {/* Valid Next Transitions */}
+                        {VALID_CASE_TRANSITIONS[selectedCase.status]?.map((st) => (
+                          <option key={st} value={st}>
+                            ➔ {st}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className='space-y-1'>
+                      <span className='text-sm font-medium'>Severity</span>
+                      <select
+                        value={editSeverity}
+                        onChange={(e) => setEditSeverity(e.target.value as SeverityType)}
+                        className='flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm'
+                      >
+                        <option value='Low'>Low</option>
+                        <option value='Medium'>Medium</option>
+                        <option value='High'>High</option>
+                        <option value='Critical'>Critical</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className='grid grid-cols-2 gap-4'>
+                    <div className='space-y-1'>
+                      <span className='text-sm font-medium'>Assigned Rescuer</span>
+                      <select
+                        value={editRescuerId}
+                        onChange={(e) => setEditRescuerId(e.target.value)}
+                        className='flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm'
+                      >
+                        <option value=''>Unassigned</option>
+                        {store.rescuers.map((r) => (
+                          <option key={r.id} value={r.id}>
+                            {r.name} ({r.availability})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className='space-y-1'>
+                      <span className='text-sm font-medium'>Current Shelter</span>
+                      <select
+                        value={editShelterId}
+                        onChange={(e) => setEditShelterId(e.target.value)}
+                        className='flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm'
+                      >
+                        <option value=''>Unassigned</option>
+                        {store.shelters.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
 
                   <div className='space-y-1'>
-                    <span className='text-sm font-medium'>Severity</span>
-                    <select
-                      value={editSeverity}
-                      onChange={(e) => setEditSeverity(e.target.value as SeverityType)}
-                      className='flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm'
-                    >
-                      <option value='Low'>Low</option>
-                      <option value='Medium'>Medium</option>
-                      <option value='High'>High</option>
-                      <option value='Critical'>Critical</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className='grid grid-cols-2 gap-4'>
-                  <div className='space-y-1'>
-                    <span className='text-sm font-medium'>Assigned Rescuer</span>
-                    <select
-                      value={editRescuerId}
-                      onChange={(e) => setEditRescuerId(e.target.value)}
-                      className='flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm'
-                    >
-                      <option value=''>Unassigned</option>
-                      {store.rescuers.map((r) => (
-                        <option key={r.id} value={r.id}>
-                          {r.name} ({r.availability})
-                        </option>
-                      ))}
-                    </select>
+                    <span className='text-sm font-medium'>Location</span>
+                    <div className='flex gap-2'>
+                      <Input
+                        value={editLocation}
+                        onChange={(e) => setEditLocation(e.target.value)}
+                        required
+                        className='flex-1'
+                      />
+                      <Button
+                        type='button'
+                        variant='outline'
+                        size='icon'
+                        onClick={() => {
+                          setMapTarget('edit')
+                          setIsMapOpen(true)
+                        }}
+                        className='shrink-0 h-9 w-9 text-primary'
+                      >
+                        <MapPin className='h-4 w-4' />
+                      </Button>
+                    </div>
                   </div>
 
                   <div className='space-y-1'>
-                    <span className='text-sm font-medium'>Current Shelter</span>
-                    <select
-                      value={editShelterId}
-                      onChange={(e) => setEditShelterId(e.target.value)}
-                      className='flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm'
-                    >
-                      <option value=''>Unassigned</option>
-                      {store.shelters.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className='space-y-1'>
-                  <span className='text-sm font-medium'>Location</span>
-                  <div className='flex gap-2'>
-                    <Input
-                      value={editLocation}
-                      onChange={(e) => setEditLocation(e.target.value)}
+                    <span className='text-sm font-medium'>Incident Description</span>
+                    <Textarea
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
                       required
-                      className='flex-1'
                     />
-                    <Button
-                      type='button'
-                      variant='outline'
-                      size='icon'
-                      onClick={() => {
-                        setMapTarget('edit')
-                        setIsMapOpen(true)
-                      }}
-                      className='shrink-0 h-9 w-9 text-primary'
-                    >
-                      <MapPin className='h-4 w-4' />
-                    </Button>
+                  </div>
+
+                  <div className='space-y-1'>
+                    <span className='text-sm font-medium'>Case Notes</span>
+                    <Textarea
+                      value={editNotes}
+                      onChange={(e) => setEditNotes(e.target.value)}
+                      placeholder='Add update logs, dispatch instructions, veterinary logs link...'
+                    />
                   </div>
                 </div>
 
-                <div className='space-y-1'>
-                  <span className='text-sm font-medium'>Incident Description</span>
-                  <Textarea
-                    value={editDescription}
-                    onChange={(e) => setEditDescription(e.target.value)}
-                    required
-                  />
-                </div>
+                {/* Right Column: Case Timeline */}
+                <div className='lg:col-span-3 space-y-4 h-[480px] overflow-y-auto pl-2'>
+                  <h3 className='font-semibold text-sm flex items-center gap-2 text-teal-600 dark:text-teal-400'>
+                    <Clock className='h-4 w-4' /> Rescue Case Journey
+                  </h3>
+                  <p className='text-[11px] text-muted-foreground leading-normal'>
+                    Dynamic audit logs showing the sequential stages from initial incident intake to medical resolution.
+                  </p>
 
-                <div className='space-y-1'>
-                  <span className='text-sm font-medium'>Case Notes</span>
-                  <Textarea
-                    value={editNotes}
-                    onChange={(e) => setEditNotes(e.target.value)}
-                    placeholder='Add update logs, dispatch instructions, veterinary logs link...'
-                  />
+                  <div className='relative border-l border-muted/50 ml-3 pl-4 space-y-4 py-2 text-xs'>
+                    {sortedLogs.length === 0 ? (
+                      <div className='text-muted-foreground text-center py-8 text-xs italic'>
+                        No history entries recorded yet.
+                      </div>
+                    ) : (
+                      sortedLogs.map((log) => (
+                        <div key={log.id} className='relative group'>
+                          {/* Timeline dot */}
+                          <div className='absolute -left-[20.5px] top-1 flex h-2 w-2 items-center justify-center rounded-full bg-teal-500 ring-4 ring-background' />
+                          <div className='flex flex-col gap-0.5'>
+                            <span className='font-semibold text-foreground leading-tight'>{log.action}</span>
+                            <div className='flex items-center gap-1.5 text-[9px] text-muted-foreground'>
+                              <span>{formatLogTime(log.timestamp)}</span>
+                              <span>•</span>
+                              <span className='bg-muted px-1.5 py-0.2 rounded font-semibold text-[8px] uppercase'>{log.user}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
               </div>
-              <DialogFooter className='pt-4'>
+
+              <DialogFooter className='pt-4 border-t mt-4'>
                 <Button type='button' variant='outline' onClick={() => setIsEditOpen(false)}>
                   Cancel
                 </Button>

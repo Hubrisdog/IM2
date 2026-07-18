@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useRescueHubStore, type IncidentReport, type SeverityType, type IncidentStatusType } from '@/stores/rescue-hub-store'
+import { useAuthStore } from '@/stores/auth-store'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -26,6 +27,7 @@ import { MockMapView } from '@/components/mock-map-view'
 
 export function IncidentReports() {
   const store = useRescueHubStore()
+  const userRole = useAuthStore((state) => state.auth.user?.role?.[0] || 'Rescuer')
   const [search, setSearch] = useState('')
   const [severityFilter, setSeverityFilter] = useState('All')
   const [isMapOpen, setIsMapOpen] = useState(false)
@@ -75,7 +77,7 @@ export function IncidentReports() {
     })
 
     setIsAddOpen(false)
-    toast.success('Incident report submitted successfully.')
+    toast.success(`Incident report by '${reporterName}' submitted successfully.`)
   }
 
   const handleOpenEdit = (inc: IncidentReport) => {
@@ -101,7 +103,7 @@ export function IncidentReports() {
     })
 
     setIsEditOpen(false)
-    toast.success('Incident report updated.')
+    toast.success(`Incident report by '${reporterName}' updated successfully.`)
   }
 
   const handleOpenDelete = (inc: IncidentReport) => {
@@ -113,7 +115,7 @@ export function IncidentReports() {
     if (!selectedIncident) return
     store.deleteIncident(selectedIncident.id)
     setIsDeleteOpen(false)
-    toast.success('Incident report deleted.')
+    toast.success(`Incident report from '${selectedIncident.reporter_name}' deleted.`)
   }
 
   const handleOpenPromote = (inc: IncidentReport) => {
@@ -140,7 +142,7 @@ export function IncidentReports() {
     )
 
     setIsPromoteOpen(false)
-    toast.success('Incident promoted! Active Rescue Case and Animal record created.')
+    toast.success(`Incident from '${selectedIncident.reporter_name}' promoted! Active Rescue Case and Animal record created.`)
   }
 
   // Filters
@@ -238,7 +240,7 @@ export function IncidentReports() {
             {filteredIncidents.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className='h-24 text-center text-muted-foreground'>
-                  No incident reports found.
+                  No incident reports submitted yet. Submit a report to begin dispatch operations.
                 </TableCell>
               </TableRow>
             ) : (
@@ -263,7 +265,7 @@ export function IncidentReports() {
                     </TableCell>
                     <TableCell className='text-right'>
                       <div className='flex items-center justify-end gap-2'>
-                        {inc.status === 'Pending' && !isPromoted && (
+                        {inc.status === 'Pending' && !isPromoted && (userRole === 'Admin' || userRole === 'Dispatcher') && (
                           <Button
                             variant='outline'
                             size='sm'
@@ -278,22 +280,26 @@ export function IncidentReports() {
                             Promoted
                           </Badge>
                         )}
-                        <Button
-                          variant='ghost'
-                          size='icon'
-                          className='h-8 w-8 text-muted-foreground'
-                          onClick={() => handleOpenEdit(inc)}
-                        >
-                          <Edit2 className='h-3.5 w-3.5' />
-                        </Button>
-                        <Button
-                          variant='ghost'
-                          size='icon'
-                          className='h-8 w-8 text-rose-500 hover:bg-rose-500/10 hover:text-rose-500'
-                          onClick={() => handleOpenDelete(inc)}
-                        >
-                          <Trash2 className='h-3.5 w-3.5' />
-                        </Button>
+                        {(userRole === 'Admin' || userRole === 'Dispatcher') && (
+                          <Button
+                            variant='ghost'
+                            size='icon'
+                            className='h-8 w-8 text-muted-foreground'
+                            onClick={() => handleOpenEdit(inc)}
+                          >
+                            <Edit2 className='h-3.5 w-3.5' />
+                          </Button>
+                        )}
+                        {userRole === 'Admin' && (
+                          <Button
+                            variant='ghost'
+                            size='icon'
+                            className='h-8 w-8 text-rose-500 hover:bg-rose-500/10 hover:text-rose-500'
+                            onClick={() => handleOpenDelete(inc)}
+                          >
+                            <Trash2 className='h-3.5 w-3.5' />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

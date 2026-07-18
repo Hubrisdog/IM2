@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useRescueHubStore, type Shelter } from '@/stores/rescue-hub-store'
+import { useAuthStore } from '@/stores/auth-store'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -24,6 +25,7 @@ import { Plus, Search, Edit2, Trash2 } from 'lucide-react'
 
 export function Shelters() {
   const store = useRescueHubStore()
+  const userRole = useAuthStore((state) => state.auth.user?.role?.[0] || 'Rescuer')
   const [search, setSearch] = useState('')
 
   // Dialog States
@@ -63,7 +65,7 @@ export function Shelters() {
     })
 
     setIsAddOpen(false)
-    toast.success('Shelter added successfully.')
+    toast.success(`Shelter '${name}' added successfully.`)
   }
 
   const handleOpenEdit = (s: Shelter) => {
@@ -87,7 +89,7 @@ export function Shelters() {
     })
 
     setIsEditOpen(false)
-    toast.success('Shelter details updated.')
+    toast.success(`Shelter '${name}' details updated successfully.`)
   }
 
   const handleOpenDelete = (s: Shelter) => {
@@ -99,7 +101,7 @@ export function Shelters() {
     if (!selectedShelter) return
     store.deleteShelter(selectedShelter.id)
     setIsDeleteOpen(false)
-    toast.success('Shelter removed.')
+    toast.success(`Shelter '${selectedShelter.name}' deleted.`)
   }
 
   // Filters
@@ -138,9 +140,11 @@ export function Shelters() {
             Track sanctuary and shelter locations, contact details, total capacities, and current occupancies.
           </p>
         </div>
-        <Button onClick={handleOpenAdd} className='flex gap-2'>
-          <Plus className='h-4 w-4' /> Add Shelter
-        </Button>
+        {(userRole === 'Admin' || userRole === 'Dispatcher') && (
+          <Button onClick={handleOpenAdd} className='flex gap-2'>
+            <Plus className='h-4 w-4' /> Add Shelter
+          </Button>
+        )}
       </div>
 
       {/* Filter Toolbar */}
@@ -173,7 +177,7 @@ export function Shelters() {
             {filteredShelters.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className='h-24 text-center text-muted-foreground'>
-                  No shelters found.
+                  No shelters registered yet. Click 'Add Shelter' to create a shelter location.
                 </TableCell>
               </TableRow>
             ) : (
@@ -197,22 +201,26 @@ export function Shelters() {
                     </TableCell>
                     <TableCell className='text-right'>
                       <div className='flex items-center justify-end gap-1'>
-                        <Button
-                          variant='ghost'
-                          size='icon'
-                          className='h-8 w-8 text-muted-foreground'
-                          onClick={() => handleOpenEdit(s)}
-                        >
-                          <Edit2 className='h-3.5 w-3.5' />
-                        </Button>
-                        <Button
-                          variant='ghost'
-                          size='icon'
-                          className='h-8 w-8 text-rose-500 hover:bg-rose-500/10 hover:text-rose-500'
-                          onClick={() => handleOpenDelete(s)}
-                        >
-                          <Trash2 className='h-3.5 w-3.5' />
-                        </Button>
+                        {(userRole === 'Admin' || userRole === 'Dispatcher') && (
+                          <Button
+                            variant='ghost'
+                            size='icon'
+                            className='h-8 w-8 text-muted-foreground'
+                            onClick={() => handleOpenEdit(s)}
+                          >
+                            <Edit2 className='h-3.5 w-3.5' />
+                          </Button>
+                        )}
+                        {userRole === 'Admin' && (
+                          <Button
+                            variant='ghost'
+                            size='icon'
+                            className='h-8 w-8 text-rose-500 hover:bg-rose-500/10 hover:text-rose-500'
+                            onClick={() => handleOpenDelete(s)}
+                          >
+                            <Trash2 className='h-3.5 w-3.5' />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

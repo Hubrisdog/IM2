@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useRescueHubStore, type Treatment } from '@/stores/rescue-hub-store'
+import { useAuthStore } from '@/stores/auth-store'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -24,6 +25,7 @@ import { Plus, Search, Edit2, Trash2 } from 'lucide-react'
 
 export function Treatments() {
   const store = useRescueHubStore()
+  const userRole = useAuthStore((state) => state.auth.user?.role?.[0] || 'Rescuer')
   const [search, setSearch] = useState('')
 
   // Dialog States
@@ -75,7 +77,8 @@ export function Treatments() {
     })
 
     setIsAddOpen(false)
-    toast.success('Medical treatment logged successfully.')
+    const animal = store.animals.find((a) => a.id === animalId)
+    toast.success(`Medical treatment logged for "${animal ? animal.name : 'animal'}" successfully.`)
   }
 
   const handleOpenEdit = (t: Treatment) => {
@@ -109,7 +112,8 @@ export function Treatments() {
     })
 
     setIsEditOpen(false)
-    toast.success('Treatment record updated.')
+    const animal = store.animals.find((a) => a.id === animalId)
+    toast.success(`Treatment record for "${animal ? animal.name : 'animal'}" updated successfully.`)
   }
 
   const handleOpenDelete = (t: Treatment) => {
@@ -121,7 +125,7 @@ export function Treatments() {
     if (!selectedTreatment) return
     store.deleteTreatment(selectedTreatment.id)
     setIsDeleteOpen(false)
-    toast.success('Treatment record deleted.')
+    toast.success('Medical treatment record deleted successfully.')
   }
 
   // Filters
@@ -146,9 +150,11 @@ export function Treatments() {
             Log and review veterinary diagnostics, operations, medications, and schedule check-up dates.
           </p>
         </div>
-        <Button onClick={handleOpenAdd} className='flex gap-2'>
-          <Plus className='h-4 w-4' /> Record Treatment
-        </Button>
+        {(userRole === 'Admin' || userRole === 'Veterinarian') && (
+          <Button onClick={handleOpenAdd} className='flex gap-2'>
+            <Plus className='h-4 w-4' /> Record Treatment
+          </Button>
+        )}
       </div>
 
       {/* Filter Toolbar */}
@@ -183,7 +189,7 @@ export function Treatments() {
             {filteredTreatments.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className='h-24 text-center text-muted-foreground'>
-                  No medical treatment records found.
+                  No medical treatments logged yet. Click "Log Medical Check" to record veterinary treatments.
                 </TableCell>
               </TableRow>
             ) : (
@@ -209,22 +215,26 @@ export function Treatments() {
                     </TableCell>
                     <TableCell className='text-right'>
                       <div className='flex items-center justify-end gap-1'>
-                        <Button
-                          variant='ghost'
-                          size='icon'
-                          className='h-8 w-8 text-muted-foreground'
-                          onClick={() => handleOpenEdit(t)}
-                        >
-                          <Edit2 className='h-3.5 w-3.5' />
-                        </Button>
-                        <Button
-                          variant='ghost'
-                          size='icon'
-                          className='h-8 w-8 text-rose-500 hover:bg-rose-500/10 hover:text-rose-500'
-                          onClick={() => handleOpenDelete(t)}
-                        >
-                          <Trash2 className='h-3.5 w-3.5' />
-                        </Button>
+                        {(userRole === 'Admin' || userRole === 'Veterinarian') && (
+                          <Button
+                            variant='ghost'
+                            size='icon'
+                            className='h-8 w-8 text-muted-foreground'
+                            onClick={() => handleOpenEdit(t)}
+                          >
+                            <Edit2 className='h-3.5 w-3.5' />
+                          </Button>
+                        )}
+                        {userRole === 'Admin' && (
+                          <Button
+                            variant='ghost'
+                            size='icon'
+                            className='h-8 w-8 text-rose-500 hover:bg-rose-500/10 hover:text-rose-500'
+                            onClick={() => handleOpenDelete(t)}
+                          >
+                            <Trash2 className='h-3.5 w-3.5' />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

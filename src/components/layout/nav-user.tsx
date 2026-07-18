@@ -37,6 +37,7 @@ type NavUserProps = {
 export function NavUser({ user }: NavUserProps) {
   const { isMobile } = useSidebar()
   const [open, setOpen] = useDialogState()
+  console.log('NavUser avatar:', user.avatar)
 
   return (
     <>

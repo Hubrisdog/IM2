@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useRescueHubStore, type Rescuer, type RescuerAvailabilityType } from '@/stores/rescue-hub-store'
+import { useAuthStore } from '@/stores/auth-store'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -24,6 +25,7 @@ import { Plus, Search, Edit2, Trash2 } from 'lucide-react'
 
 export function Rescuers() {
   const store = useRescueHubStore()
+  const userRole = useAuthStore((state) => state.auth.user?.role?.[0] || 'Rescuer')
   const [search, setSearch] = useState('')
   const [availabilityFilter, setAvailabilityFilter] = useState('All')
 
@@ -67,7 +69,7 @@ export function Rescuers() {
     })
 
     setIsAddOpen(false)
-    toast.success('Rescuer profile registered successfully.')
+    toast.success(`Rescuer '${name}' registered successfully.`)
   }
 
   const handleOpenEdit = (r: Rescuer) => {
@@ -93,7 +95,7 @@ export function Rescuers() {
     })
 
     setIsEditOpen(false)
-    toast.success('Rescuer profile updated.')
+    toast.success(`Rescuer '${name}' profile updated successfully.`)
   }
 
   const handleOpenDelete = (r: Rescuer) => {
@@ -105,7 +107,7 @@ export function Rescuers() {
     if (!selectedRescuer) return
     store.deleteRescuer(selectedRescuer.id)
     setIsDeleteOpen(false)
-    toast.success('Rescuer profile deleted.')
+    toast.success(`Rescuer profile for '${selectedRescuer.name}' deleted.`)
   }
 
   // Filters
@@ -140,9 +142,11 @@ export function Rescuers() {
             Manage volunteer rescuers, track their certifications or handling skills, and oversee availability.
           </p>
         </div>
-        <Button onClick={handleOpenAdd} className='flex gap-2'>
-          <Plus className='h-4 w-4' /> Add Rescuer Profile
-        </Button>
+        {(userRole === 'Admin' || userRole === 'Dispatcher') && (
+          <Button onClick={handleOpenAdd} className='flex gap-2'>
+            <Plus className='h-4 w-4' /> Add Rescuer Profile
+          </Button>
+        )}
       </div>
 
       {/* Filter Toolbar */}
@@ -187,7 +191,7 @@ export function Rescuers() {
             {filteredRescuers.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className='h-24 text-center text-muted-foreground'>
-                  No rescuers found.
+                  No rescuer profiles registered yet. Click 'Add Rescuer Profile' to register a rescuer.
                 </TableCell>
               </TableRow>
             ) : (
@@ -214,22 +218,26 @@ export function Rescuers() {
                   </TableCell>
                   <TableCell className='text-right'>
                     <div className='flex items-center justify-end gap-1'>
-                      <Button
-                        variant='ghost'
-                        size='icon'
-                        className='h-8 w-8 text-muted-foreground'
-                        onClick={() => handleOpenEdit(r)}
-                      >
-                        <Edit2 className='h-3.5 w-3.5' />
-                      </Button>
-                      <Button
-                        variant='ghost'
-                        size='icon'
-                        className='h-8 w-8 text-rose-500 hover:bg-rose-500/10 hover:text-rose-500'
-                        onClick={() => handleOpenDelete(r)}
-                      >
-                        <Trash2 className='h-3.5 w-3.5' />
-                      </Button>
+                      {(userRole === 'Admin' || userRole === 'Dispatcher') && (
+                        <Button
+                          variant='ghost'
+                          size='icon'
+                          className='h-8 w-8 text-muted-foreground'
+                          onClick={() => handleOpenEdit(r)}
+                        >
+                          <Edit2 className='h-3.5 w-3.5' />
+                        </Button>
+                      )}
+                      {userRole === 'Admin' && (
+                        <Button
+                          variant='ghost'
+                          size='icon'
+                          className='h-8 w-8 text-rose-500 hover:bg-rose-500/10 hover:text-rose-500'
+                          onClick={() => handleOpenDelete(r)}
+                        >
+                          <Trash2 className='h-3.5 w-3.5' />
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>

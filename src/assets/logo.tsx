@@ -9,7 +9,7 @@ export function Logo({ className, ...props }: SVGProps<SVGSVGElement>) {
       xmlns='http://www.w3.org/2000/svg'
       height='24'
       width='24'
-      className={cn('size-6 text-teal-600 dark:text-teal-400', className)}
+      className={cn('size-6', className)}
       {...props}
     >
       <title>RescueHub Logo</title>

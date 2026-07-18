@@ -1,6 +1,8 @@
 import { useRescueHubStore } from '@/stores/rescue-hub-store'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import {
   ResponsiveContainer,
   BarChart,
@@ -31,6 +33,40 @@ export function Reports() {
 
   const recoveryRate = totalAnimals > 0 ? (recoveredCount / totalAnimals) * 100 : 0
   const adoptionRate = totalAnimals > 0 ? (adoptedCount / totalAnimals) * 100 : 0
+
+  // Tabular Aggregations for Reports
+  const speciesMap: Record<string, number> = {}
+  store.animals.forEach((a) => {
+    speciesMap[a.species] = (speciesMap[a.species] || 0) + 1
+  })
+  const animalsBySpecies = Object.entries(speciesMap).map(([species, count]) => ({ species, count }))
+
+  const animalsByShelter = store.shelters.map((s) => {
+    const activeOccupancy = store.animals.filter(
+      (a) => a.shelter_id === s.id && a.status !== 'Adopted' && a.status !== 'Released'
+    ).length
+    const pct = s.capacity > 0 ? Math.round((activeOccupancy / s.capacity) * 100) : 0
+    return { name: s.name, capacity: s.capacity, occupancy: activeOccupancy, occupancyRate: pct }
+  })
+
+  const statusMap: Record<string, number> = {}
+  store.cases.forEach((c) => {
+    statusMap[c.status] = (statusMap[c.status] || 0) + 1
+  })
+  const casesByStatus = Object.entries(statusMap).map(([status, count]) => ({ status, count }))
+
+  const vetMap: Record<string, number> = {}
+  store.treatments.forEach((t) => {
+    vetMap[t.veterinarian] = (vetMap[t.veterinarian] || 0) + 1
+  })
+  const treatmentsByVet = Object.entries(vetMap).map(([vet, count]) => ({ vet, count }))
+
+  const outcomesSummary = [
+    { outcome: 'Adopted (Rehomed)', count: adoptedCount },
+    { outcome: 'Released (Returned to Wild)', count: releasedCount },
+    { outcome: 'Currently Under Treatment', count: underTreatmentCount },
+    { outcome: 'Awaiting Veterinary Check (Intake)', count: intakeCount }
+  ]
 
   // Avg Days to Close Case
   const avgDaysToClose =
@@ -339,9 +375,204 @@ export function Reports() {
           </CardContent>
         </Card>
       </div>
+      {/* Detailed Tabular Reports Section */}
+      <Card className='mt-6'>
+        <CardHeader>
+          <CardTitle>Detailed Aggregation Reports</CardTitle>
+          <CardDescription>
+            Relational summaries compiled live from active operations.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue='species' className='space-y-4'>
+            <TabsList className='flex w-full overflow-x-auto justify-start border-b gap-2 h-auto bg-transparent p-0 rounded-none'>
+              <TabsTrigger
+                value='species'
+                className='border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none px-4 py-2 text-sm font-medium'
+              >
+                Animals by Species
+              </TabsTrigger>
+              <TabsTrigger
+                value='shelters'
+                className='border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none px-4 py-2 text-sm font-medium'
+              >
+                Animals by Shelter
+              </TabsTrigger>
+              <TabsTrigger
+                value='status'
+                className='border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none px-4 py-2 text-sm font-medium'
+              >
+                Cases by Status
+              </TabsTrigger>
+              <TabsTrigger
+                value='vets'
+                className='border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none px-4 py-2 text-sm font-medium'
+              >
+                Treatments by Vet
+              </TabsTrigger>
+              <TabsTrigger
+                value='outcomes'
+                className='border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none px-4 py-2 text-sm font-medium'
+              >
+                Adoption Summary
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Animals by Species Tab */}
+            <TabsContent value='species' className='space-y-2 pt-2'>
+              <div className='rounded-md border bg-card'>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Species</TableHead>
+                      <TableHead className='text-right'>Total Count</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {animalsBySpecies.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={2} className='h-24 text-center text-muted-foreground'>
+                          No animal species data registered.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      animalsBySpecies.map((item) => (
+                        <TableRow key={item.species}>
+                          <TableCell className='font-semibold'>{item.species}</TableCell>
+                          <TableCell className='text-right font-bold'>{item.count}</TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
+
+            {/* Animals by Shelter Tab */}
+            <TabsContent value='shelters' className='space-y-2 pt-2'>
+              <div className='rounded-md border bg-card'>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Shelter Name</TableHead>
+                      <TableHead className='text-right'>Active Occupancy</TableHead>
+                      <TableHead className='text-right'>Total Capacity</TableHead>
+                      <TableHead className='text-right'>Occupancy Rate</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {animalsByShelter.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className='h-24 text-center text-muted-foreground'>
+                          No shelters registered.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      animalsByShelter.map((item) => (
+                        <TableRow key={item.name}>
+                          <TableCell className='font-semibold'>{item.name}</TableCell>
+                          <TableCell className='text-right'>{item.occupancy}</TableCell>
+                          <TableCell className='text-right'>{item.capacity}</TableCell>
+                          <TableCell className='text-right font-bold text-teal-600 dark:text-teal-400'>
+                            {item.occupancyRate}%
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
+
+            {/* Cases by Status Tab */}
+            <TabsContent value='status' className='space-y-2 pt-2'>
+              <div className='rounded-md border bg-card'>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Rescue Status</TableHead>
+                      <TableHead className='text-right'>Active Cases</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {casesByStatus.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={2} className='h-24 text-center text-muted-foreground'>
+                          No cases logged.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      casesByStatus.map((item) => (
+                        <TableRow key={item.status}>
+                          <TableCell className='font-semibold'>{item.status}</TableCell>
+                          <TableCell className='text-right font-bold'>{item.count}</TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
+
+            {/* Treatments by Vet Tab */}
+            <TabsContent value='vets' className='space-y-2 pt-2'>
+              <div className='rounded-md border bg-card'>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Veterinarian</TableHead>
+                      <TableHead className='text-right'>Treatments Logged</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {treatmentsByVet.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={2} className='h-24 text-center text-muted-foreground'>
+                          No medical treatments logged.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      treatmentsByVet.map((item) => (
+                        <TableRow key={item.vet}>
+                          <TableCell className='font-semibold'>{item.vet}</TableCell>
+                          <TableCell className='text-right font-bold'>{item.count}</TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
+
+            {/* Adoption Summary Tab */}
+            <TabsContent value='outcomes' className='space-y-2 pt-2'>
+              <div className='rounded-md border bg-card'>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Operational Outcome State</TableHead>
+                      <TableHead className='text-right'>Total Animals</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {outcomesSummary.map((item) => (
+                      <TableRow key={item.outcome}>
+                        <TableCell className='font-semibold'>{item.outcome}</TableCell>
+                        <TableCell className='text-right font-bold text-blue-600 dark:text-blue-400'>
+                          {item.count}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
 
       {/* CSV Export Panel */}
-      <Card>
+      <Card className='mt-6'>
         <CardHeader>
           <CardTitle className='flex items-center gap-2'>
             <TrendingUp className='h-5 w-5 text-muted-foreground' /> Export Operational Data
@@ -361,7 +592,6 @@ export function Reports() {
             <Download className='h-4 w-4' /> Export Treatments CSV
           </Button>
         </CardContent>
-      </Card>
-    </div>
+      </Card>    </div>
   )
 }

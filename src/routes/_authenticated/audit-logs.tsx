@@ -1,6 +1,11 @@
 import { useState } from 'react'
+import { createFileRoute } from '@tanstack/react-router'
 import { useRescueHubStore } from '@/stores/rescue-hub-store'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
 import { formatDistanceToNow } from 'date-fns'
 import {
   Dialog,
@@ -9,20 +14,29 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Badge } from '@/components/ui/badge'
-import { Info, Calendar, User, Tag, MapPin, Activity, FileText } from 'lucide-react'
-import { getSpeciesPlaceholder } from '../../animals/utils/placeholders'
+import { Search, Info, Calendar, User, Tag, MapPin, Activity, FileText, ClipboardList } from 'lucide-react'
+import { getSpeciesPlaceholder } from '@/features/animals/utils/placeholders'
 
-export function RecentSales() {
+export const Route = createFileRoute('/_authenticated/audit-logs')({
+  component: AuditLogsPage,
+})
+
+function AuditLogsPage() {
   const store = useRescueHubStore()
   const activityLogs = store.activityLogs
 
-  // Dialog States
+  // Search/Filters State
+  const [search, setSearch] = useState('')
+  const [selectedType, setSelectedType] = useState('All')
+
+  // Dialog State
   const [selectedLog, setSelectedLog] = useState<any>(null)
   const [isOpen, setIsOpen] = useState(false)
 
-  // Show the latest 6 logs
-  const latestLogs = activityLogs.slice(0, 6)
+  const handleLogClick = (log: any) => {
+    setSelectedLog(log)
+    setIsOpen(true)
+  }
 
   const getInitials = (user: string) => {
     if (!user) return 'SYS'
@@ -51,10 +65,17 @@ export function RecentSales() {
     }
   }
 
-  const handleLogClick = (log: any) => {
-    setSelectedLog(log)
-    setIsOpen(true)
-  }
+  // Filter logs based on search and type select
+  const filteredLogs = activityLogs.filter((log) => {
+    const matchesSearch =
+      log.action.toLowerCase().includes(search.toLowerCase()) ||
+      log.user.toLowerCase().includes(search.toLowerCase()) ||
+      log.entity_type.toLowerCase().includes(search.toLowerCase())
+
+    const matchesType = selectedType === 'All' || log.entity_type === selectedType
+
+    return matchesSearch && matchesType
+  })
 
   // Helper to fetch referenced entity details dynamically from store
   const getEntityDetails = (log: any) => {
@@ -63,7 +84,7 @@ export function RecentSales() {
 
     switch (entity_type) {
       case 'IncidentReport': {
-        const item = store.incidents.find(i => i.id === entity_id)
+        const item = store.incidents.find((i) => i.id === entity_id)
         if (!item) return null
         return (
           <div className='space-y-3 mt-4 p-4 bg-muted/30 rounded-lg border border-teal-500/10 text-sm'>
@@ -83,7 +104,7 @@ export function RecentSales() {
         )
       }
       case 'Animal': {
-        const item = store.animals.find(a => a.id === entity_id)
+        const item = store.animals.find((a) => a.id === entity_id)
         if (!item) return null
         return (
           <div className='space-y-3 mt-4 p-4 bg-muted/30 rounded-lg border border-teal-500/10 text-sm'>
@@ -103,9 +124,9 @@ export function RecentSales() {
         )
       }
       case 'RescueCase': {
-        const item = store.cases.find(c => c.id === entity_id)
+        const item = store.cases.find((c) => c.id === entity_id)
         if (!item) return null
-        const team = store.rescuers.find(r => r.id === item.rescuer_id)
+        const team = store.rescuers.find((r) => r.id === item.rescuer_id)
         return (
           <div className='space-y-3 mt-4 p-4 bg-muted/30 rounded-lg border border-teal-500/10 text-sm'>
             <div className='flex items-center gap-1.5 font-semibold text-teal-600 dark:text-teal-400'>
@@ -121,7 +142,7 @@ export function RecentSales() {
         )
       }
       case 'Treatment': {
-        const item = store.treatments.find(t => t.id === entity_id)
+        const item = store.treatments.find((t) => t.id === entity_id)
         if (!item) return null
         return (
           <div className='space-y-3 mt-4 p-4 bg-muted/30 rounded-lg border border-teal-500/10 text-sm'>
@@ -137,7 +158,7 @@ export function RecentSales() {
         )
       }
       case 'Shelter': {
-        const item = store.shelters.find(s => s.id === entity_id)
+        const item = store.shelters.find((s) => s.id === entity_id)
         if (!item) return null
         return (
           <div className='space-y-3 mt-4 p-4 bg-muted/30 rounded-lg border border-teal-500/10 text-sm'>
@@ -157,45 +178,116 @@ export function RecentSales() {
   }
 
   return (
-    <div className='space-y-4'>
-      {latestLogs.length === 0 ? (
-        <p className='text-sm text-muted-foreground text-center py-4'>
-          No activities logged yet.
-        </p>
-      ) : (
-        latestLogs.map((log) => {
-          let timeAgo: string
-          try {
-            timeAgo = formatDistanceToNow(new Date(log.timestamp), { addSuffix: true })
-          } catch {
-            timeAgo = log.timestamp.split('T')[0]
-          }
+    <div className='flex-1 space-y-4 p-8 pt-6'>
+      <div className='flex items-center justify-between space-y-2'>
+        <div>
+          <h2 className='text-3xl font-bold tracking-tight'>System Audit Logs</h2>
+          <p className='text-muted-foreground'>
+            Track chronological operations, status promotions, and database updates across RescueHub.
+          </p>
+        </div>
+      </div>
 
-          return (
-            <div
-              key={log.id}
-              onClick={() => handleLogClick(log)}
-              className='flex items-start gap-4 cursor-pointer hover:bg-teal-500/5 p-2.5 rounded-lg transition-all duration-200 border border-transparent hover:border-teal-500/10 group'
-            >
-              <Avatar className='h-9 w-9 border flex items-center justify-center font-bold text-xs shrink-0 group-hover:scale-105 transition-transform duration-200'>
-                <AvatarFallback className={getEntityBadge(log.entity_type)}>
-                  {getInitials(log.user)}
-                </AvatarFallback>
-              </Avatar>
-              <div className='flex-1 space-y-1 min-w-0'>
-                <p className='text-sm font-medium leading-tight text-foreground break-words group-hover:text-teal-500 dark:group-hover:text-teal-400 transition-colors duration-200'>
-                  {log.action}
-                </p>
-                <div className='flex items-center gap-2 text-xs text-muted-foreground'>
-                  <span className='font-semibold'>{log.user}</span>
-                  <span>•</span>
-                  <span>{timeAgo}</span>
-                </div>
-              </div>
-            </div>
-          )
-        })
-      )}
+      <div className='flex flex-col md:flex-row gap-4 items-center justify-between bg-muted/40 p-4 rounded-xl border border-teal-500/5'>
+        {/* Search */}
+        <div className='relative w-full md:max-w-xs shrink-0'>
+          <Search className='absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground' />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder='Search logs...'
+            className='pl-8 bg-background border-teal-500/10'
+          />
+        </div>
+
+        {/* Entity Type Filter */}
+        <div className='flex items-center gap-2 w-full md:w-auto'>
+          <span className='text-xs font-semibold text-muted-foreground shrink-0'>Filter Entity:</span>
+          <select
+            value={selectedType}
+            onChange={(e) => setSelectedType(e.target.value)}
+            className='flex h-9 w-full md:w-48 rounded-md border border-teal-500/10 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring'
+          >
+            <option value='All'>All Entities</option>
+            <option value='IncidentReport'>Incident Report</option>
+            <option value='RescueCase'>Rescue Case</option>
+            <option value='Animal'>Animal Profile</option>
+            <option value='Treatment'>Medical Treatment</option>
+            <option value='Shelter'>Shelters</option>
+          </select>
+        </div>
+      </div>
+
+      <Card className='border-teal-500/10 shadow-lg bg-card/60 backdrop-blur-md'>
+        <CardHeader className='pb-2'>
+          <CardTitle className='text-xl font-bold flex items-center gap-2'>
+            <ClipboardList className='h-5 w-5 text-teal-500' />
+            Activity Log Stream
+          </CardTitle>
+          <CardDescription>
+            Showing {filteredLogs.length} events logged in this session.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className='p-0'>
+          <div className='overflow-x-auto'>
+            <Table>
+              <TableHeader>
+                <TableRow className='hover:bg-transparent border-teal-500/10'>
+                  <TableHead className='w-12'></TableHead>
+                  <TableHead>User / Identity</TableHead>
+                  <TableHead>Action Logged</TableHead>
+                  <TableHead>Target Entity</TableHead>
+                  <TableHead>Date & Time</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredLogs.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className='text-center py-8 text-muted-foreground'>
+                      No matching audit logs found.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredLogs.map((log) => {
+                    let timeAgo: string
+                    try {
+                      timeAgo = formatDistanceToNow(new Date(log.timestamp), { addSuffix: true })
+                    } catch {
+                      timeAgo = log.timestamp.split('T')[0]
+                    }
+
+                    return (
+                      <TableRow
+                        key={log.id}
+                        onClick={() => handleLogClick(log)}
+                        className='cursor-pointer hover:bg-teal-500/5 transition-colors border-teal-500/10'
+                      >
+                        <TableCell>
+                          <Avatar className='h-8 w-8 border flex items-center justify-center font-bold text-xs'>
+                            <AvatarFallback className={getEntityBadge(log.entity_type)}>
+                              {getInitials(log.user)}
+                            </AvatarFallback>
+                          </Avatar>
+                        </TableCell>
+                        <TableCell className='font-semibold text-foreground'>{log.user}</TableCell>
+                        <TableCell className='text-sm text-foreground max-w-sm break-words'>{log.action}</TableCell>
+                        <TableCell>
+                          <Badge className={getEntityBadge(log.entity_type)} variant='outline'>
+                            {log.entity_type}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className='text-xs text-muted-foreground'>
+                          {new Date(log.timestamp).toLocaleString()} ({timeAgo})
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Activity Details Dialog */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>

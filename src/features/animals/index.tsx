@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useRescueHubStore, type Animal, type AnimalStatusType } from '@/stores/rescue-hub-store'
+import { useAuthStore } from '@/stores/auth-store'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -22,9 +23,12 @@ import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
 import { Plus, Search, Edit2, Trash2, PawPrint } from 'lucide-react'
+import { AnimalPhotoUpload } from './components/animal-photo-upload'
+import { getSpeciesPlaceholder } from './utils/placeholders'
 
 export function Animals() {
   const store = useRescueHubStore()
+  const userRole = useAuthStore((state) => state.auth.user?.role?.[0] || 'Rescuer')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
 
@@ -92,7 +96,7 @@ export function Animals() {
     })
 
     setIsAddOpen(false)
-    toast.success('Animal record registered successfully.')
+    toast.success(`Animal "${name}" registered successfully.`)
   }
 
   const handleOpenEdit = (a: Animal) => {
@@ -132,7 +136,7 @@ export function Animals() {
     })
 
     setIsEditOpen(false)
-    toast.success('Animal record updated.')
+    toast.success(`Animal profile for "${name}" updated successfully.`)
   }
 
   const handleOpenDelete = (a: Animal) => {
@@ -144,7 +148,7 @@ export function Animals() {
     if (!selectedAnimal) return
     store.deleteAnimal(selectedAnimal.id)
     setIsDeleteOpen(false)
-    toast.success('Animal record deleted.')
+    toast.success(`Animal record for "${selectedAnimal.name}" deleted.`)
   }
 
   // Filters
@@ -163,17 +167,19 @@ export function Animals() {
   const getStatusBadge = (st: AnimalStatusType) => {
     switch (st) {
       case 'Intake':
-        return 'bg-amber-100 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400'
+        return 'bg-orange-100 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 border-orange-500/20'
       case 'Under Treatment':
-        return 'bg-rose-100 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400'
+        return 'bg-rose-100 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border-rose-500/20'
       case 'Recovered':
-        return 'bg-emerald-100 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400'
+        return 'bg-emerald-100 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
       case 'Adopted':
-        return 'bg-green-100 dark:bg-green-950/30 text-green-600 dark:text-green-400'
+        return 'bg-sky-100 dark:bg-sky-950/30 text-sky-600 dark:text-sky-400 border-sky-500/20'
       case 'Released':
-        return 'bg-blue-100 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400'
+        return 'bg-purple-100 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 border-purple-500/20'
     }
   }
+
+
 
   return (
     <div className='flex-1 space-y-4 p-8 pt-6'>
@@ -184,9 +190,11 @@ export function Animals() {
             Manage registered animals, track their conditions, and oversee their rescue and shelter statuses.
           </p>
         </div>
-        <Button onClick={handleOpenAdd} className='flex gap-2'>
-          <Plus className='h-4 w-4' /> Add Animal Record
-        </Button>
+        {(userRole === 'Admin' || userRole === 'Dispatcher') && (
+          <Button onClick={handleOpenAdd} className='flex gap-2'>
+            <Plus className='h-4 w-4' /> Add Animal Record
+          </Button>
+        )}
       </div>
 
       {/* Filter Toolbar */}
@@ -237,7 +245,7 @@ export function Animals() {
             {filteredAnimals.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={9} className='h-24 text-center text-muted-foreground'>
-                  No animal records found.
+                  No animal records registered yet. Click "Add Animal Record" to register an animal.
                 </TableCell>
               </TableRow>
             ) : (
@@ -248,17 +256,11 @@ export function Animals() {
                 return (
                   <TableRow key={a.id}>
                     <TableCell>
-                      {a.photo_url ? (
-                        <img
-                          src={a.photo_url}
-                          alt={a.name}
-                          className='h-10 w-10 rounded-full object-cover border'
-                        />
-                      ) : (
-                        <div className='h-10 w-10 rounded-full bg-muted flex items-center justify-center border'>
-                          <PawPrint className='h-5 w-5 text-muted-foreground' />
-                        </div>
-                      )}
+                      <img
+                        src={a.photo_url || getSpeciesPlaceholder(a.species)}
+                        alt={a.name}
+                        className='h-10 w-10 rounded-full object-cover border'
+                      />
                     </TableCell>
                     <TableCell className='font-semibold'>{a.name}</TableCell>
                     <TableCell>
@@ -287,22 +289,26 @@ export function Animals() {
                     </TableCell>
                     <TableCell className='text-right'>
                       <div className='flex items-center justify-end gap-1'>
-                        <Button
-                          variant='ghost'
-                          size='icon'
-                          className='h-8 w-8 text-muted-foreground'
-                          onClick={() => handleOpenEdit(a)}
-                        >
-                          <Edit2 className='h-3.5 w-3.5' />
-                        </Button>
-                        <Button
-                          variant='ghost'
-                          size='icon'
-                          className='h-8 w-8 text-rose-500 hover:bg-rose-500/10 hover:text-rose-500'
-                          onClick={() => handleOpenDelete(a)}
-                        >
-                          <Trash2 className='h-3.5 w-3.5' />
-                        </Button>
+                        {(userRole === 'Admin' || userRole === 'Dispatcher' || userRole === 'Veterinarian') && (
+                          <Button
+                            variant='ghost'
+                            size='icon'
+                            className='h-8 w-8 text-muted-foreground'
+                            onClick={() => handleOpenEdit(a)}
+                          >
+                            <Edit2 className='h-3.5 w-3.5' />
+                          </Button>
+                        )}
+                        {userRole === 'Admin' && (
+                          <Button
+                            variant='ghost'
+                            size='icon'
+                            className='h-8 w-8 text-rose-500 hover:bg-rose-500/10 hover:text-rose-500'
+                            onClick={() => handleOpenDelete(a)}
+                          >
+                            <Trash2 className='h-3.5 w-3.5' />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -395,14 +401,11 @@ export function Animals() {
                 </div>
               </div>
 
-              <div className='space-y-1'>
-                <span className='text-sm font-medium'>Profile Photo URL</span>
-                <Input
-                  value={photoUrl}
-                  onChange={(e) => setPhotoUrl(e.target.value)}
-                  placeholder='https://images.unsplash.com/...'
-                />
-              </div>
+              <AnimalPhotoUpload
+                value={photoUrl}
+                onChange={setPhotoUrl}
+                species={species}
+              />
 
               <div className='grid grid-cols-2 gap-4'>
                 <div className='space-y-1'>
@@ -535,10 +538,11 @@ export function Animals() {
                   </div>
                 </div>
 
-                <div className='space-y-1'>
-                  <span className='text-sm font-medium'>Profile Photo URL</span>
-                  <Input value={photoUrl} onChange={(e) => setPhotoUrl(e.target.value)} />
-                </div>
+                <AnimalPhotoUpload
+                  value={photoUrl}
+                  onChange={setPhotoUrl}
+                  species={species}
+                />
 
                 <div className='grid grid-cols-2 gap-4'>
                   <div className='space-y-1'>

@@ -1,6 +1,36 @@
 import { Request, Response } from 'express'
 import prisma from '../config/db'
 import { parseId } from '../utils/parser'
+import fs from 'fs'
+import path from 'path'
+
+const saveBase64Image = (base64Str: string | null): string | null => {
+  if (!base64Str) return null
+  if (!base64Str.startsWith('data:image/')) return base64Str // Already a URL or path
+
+  try {
+    const matches = base64Str.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/)
+    if (!matches || matches.length !== 3) return base64Str
+
+    const mimeType = matches[1]
+    const base64Data = matches[2]
+    const extension = mimeType.split('/')[1] || 'png'
+    const filename = `animal-${Date.now()}-${Math.floor(Math.random() * 100000)}.${extension}`
+    
+    const uploadDir = path.join(__dirname, '..', '..', 'uploads', 'animals')
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true })
+    }
+
+    const filePath = path.join(uploadDir, filename)
+    fs.writeFileSync(filePath, Buffer.from(base64Data, 'base64'))
+    
+    return `http://localhost:5000/uploads/animals/${filename}`
+  } catch (error) {
+    console.error('Error saving base64 image:', error)
+    return base64Str
+  }
+}
 
 export const getAnimals = async (req: Request, res: Response) => {
   try {
@@ -56,7 +86,7 @@ export const createAnimal = async (req: Request, res: Response) => {
         weight: parseFloat(weight) || 0,
         condition: condition || '',
         status: status || 'Intake',
-        photo_url: photo_url || null,
+        photo_url: saveBase64Image(photo_url),
         shelter_id: parseId(shelter_id),
         ticket_id: parseId(case_id)
       }
@@ -133,7 +163,7 @@ export const updateAnimal = async (req: Request, res: Response) => {
         weight: data.weight ? parseFloat(data.weight) : undefined,
         condition: data.condition,
         status: data.status,
-        photo_url: data.photo_url,
+        photo_url: data.photo_url !== undefined ? saveBase64Image(data.photo_url) : undefined,
         shelter_id: data.shelter_id !== undefined ? parseId(data.shelter_id) : undefined
       }
     })

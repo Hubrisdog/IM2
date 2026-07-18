@@ -10,30 +10,32 @@ import {
   Settings,
   Command,
   AudioWaveform,
-  GalleryVerticalEnd
+  GalleryVerticalEnd,
+  ClipboardList
 } from 'lucide-react'
 import { type SidebarData } from '../types'
+import { Logo } from '@/assets/logo'
 
 export const sidebarData: SidebarData = {
   user: {
     name: 'Rescue Admin',
     email: 'admin@rescuehub.org',
-    avatar: '',
+    avatar: '/images/admin-avatar.jpg',
   },
   teams: [
     {
       name: 'RescueHub HQ',
-      logo: Command,
+      logo: Logo,
       plan: 'Operations Portal',
     },
     {
       name: 'Green Valley',
-      logo: GalleryVerticalEnd,
+      logo: Home,
       plan: 'Sanctuary Node',
     },
     {
       name: 'Safe Haven',
-      logo: AudioWaveform,
+      logo: HeartPulse,
       plan: 'Shelter Node',
     },
   ],
@@ -90,6 +92,11 @@ export const sidebarData: SidebarData = {
           title: 'Performance Reports',
           url: '/reports',
           icon: TrendingUp,
+        },
+        {
+          title: 'Audit Logs',
+          url: '/audit-logs',
+          icon: ClipboardList,
         },
       ],
     },

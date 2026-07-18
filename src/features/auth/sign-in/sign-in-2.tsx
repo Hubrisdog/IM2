@@ -11,7 +11,7 @@ export function SignIn2() {
       <div className='lg:p-8'>
         <div className='mx-auto flex w-full flex-col justify-center space-y-2 py-8 sm:w-120 sm:p-8'>
           <div className='mb-4 flex items-center justify-center'>
-            <Logo className='me-2' />
+            <Logo className='me-2 text-teal-600 dark:text-teal-400' />
             <h1 className='text-xl font-bold tracking-tight bg-gradient-to-r from-teal-600 to-cyan-500 bg-clip-text text-transparent'>RescueHub</h1>
           </div>
         </div>
