@@ -466,48 +466,24 @@ The user interface is designed using responsive web aesthetics, featuring high-c
 
 ---
 
-## Appendix A. Business Process Model and Notation (BPMN) Diagram & Workflow Description
+## Appendix A - Business Process Model and Notation (BPMN) Diagram
 
-### 1. BPMN Operational Workflow Diagram
-The **Business Process Model and Notation (BPMN)** diagram outlines the end-to-end operational lifecycle of the RescueHub system across four primary functional pools/lanes:
+This appendix presents the Business Process Model and Notation (BPMN) diagram of the RescueHub Animal Rescue Operations System. The diagram illustrates the workflow of animal rescue operations, including public incident reporting, emergency dispatching, field rescue operations, shelter capacity management, veterinary treatments, and administrative functions.
 
 ```
-+-----------------------------------------------------------------------------------------------------------------------+
-| PUBLIC PORTAL LANE                                                                                                    |
-|  (Start) ──> Citizen Spots Animal in Distress ──> Fills Species, Location & Details ──> Submits Incident Report ──> (x)|
-+-----------------------------------------------------------------------------------------------------------------------+
-                                                               |
-                                                               v
-+-----------------------------------------------------------------------------------------------------------------------+
-| DISPATCH CONSOLE LANE                                                                                                 |
-|  Dispatcher Receives Alert ──> Reviews Severity & Location ──> Is Report Valid? ──[NO]──> Close Report / Dismiss     |
-|                                                                 │                                                     |
-|                                                               [YES]                                                   |
-|                                                                 ▼                                                     |
-|                                                     Promote to Rescue Case (RC-2026-XXXX)                             |
-|                                                     Assign Rescue Team & Housing Shelter                              |
-+-----------------------------------------------------------------------------------------------------------------------+
-                                                               |
-                                                               v
-+-----------------------------------------------------------------------------------------------------------------------+
-| FIELD RESCUE OPERATION LANE                                                                                           |
-|  Rescuers Receive Alert ──> Update Status: 'EN_ROUTE' ──> Arrive at Scene & Secure Animal ──> Update Status: 'RESCUED'|
-+-----------------------------------------------------------------------------------------------------------------------+
-                                                               |
-                                                               v
-+-----------------------------------------------------------------------------------------------------------------------+
-| SHELTER INTAKE & VETERINARY REHABILITATION LANE                                                                       |
-|  Shelter Intake: Register Animal Profile ──> Vet Examination ──> Log Diagnosis, Treatment & Medication                |
-|                                                                                 │                                     |
-|                                                                       Rehabilitation Outcome                          |
-|                                                                       ┌─────────┴─────────┐                           |
-|                                                                       ▼                   ▼                           |
-|                                                                  Adoptable            Wild/Feral                      |
-|                                                                       │                   │                           |
-|                                                                       ▼                   ▼                           |
-|                                                                Adopted Out         Released to Habitat                |
-|                                                                 (End - Closed)      (End - Closed)                    |
-+-----------------------------------------------------------------------------------------------------------------------+
+[Attach BPMN Diagram Image Here]
+```
+
+<div style="page-break-after: always;"></div>
+
+---
+
+## Appendix B - Entity Relationship Diagram (ERD)
+
+This appendix presents the Entity Relationship Diagram (ERD) of the proposed system. It illustrates the relationships among the database entities used to store and manage animal rescue information, including incident reports, rescue case dispatches, animal health profiles, shelter capacities, veterinary treatments, user roles, rescue teams, and system audit logs.
+
+```
+[Attach phpMyAdmin / MySQL ERD Image Here]
 ```
 
 ### 2. BPMN Process Workflow Description
