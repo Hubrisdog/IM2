@@ -48,8 +48,8 @@ Instructor
   * **2.8 User Interface** .............................................................................................. **12**
 * **REFERENCES** .................................................................................----------------........... **13**
 * **APPENDICES** .......................................................................................................... **14**
-  * **Appendix A. Transmittal Letter** .......................................................................... **14**
-  * **Appendix B. Stakeholder Interview Guide & Questionnaire** .................................. **15**
+  * **Appendix A. Business Process Model and Notation (BPMN) Diagram** .................. **14**
+  * **Appendix B. Entity-Relationship Diagram (ERD) & Schema Model** .................... **15**
 
 <div style="page-break-after: always;"></div>
 
@@ -466,58 +466,190 @@ The user interface is designed using responsive web aesthetics, featuring high-c
 
 ---
 
-## Appendix A. Transmittal Letter
+## Appendix A. Business Process Model and Notation (BPMN) Diagram & Workflow Description
 
-```text
-July 18, 2026
+### 1. BPMN Operational Workflow Diagram
+The **Business Process Model and Notation (BPMN)** diagram outlines the end-to-end operational lifecycle of the RescueHub system across four primary functional pools/lanes:
 
-Mr. Edwin Bartlett
-Instructor, Department of Computer, Information Sciences and Mathematics
-University of San Carlos
-Talamban Campus, Cebu City
-
-Dear Mr. Bartlett,
-
-We are pleased to submit the completed project proposal and system documentation for "RescueHub: A Web-based Animal Rescue Operations and Information Management System," in partial fulfillment of the requirements for Information Management II (IM2).
-
-RescueHub was developed to address critical operational bottlenecks in stray animal rescue workflows, including fragmented communication, unmonitored shelter capacities, and paper-based medical tracking. The system incorporates a normalized MySQL relational database, Express REST APIs, role-based access control (RBAC), interactive reporting, and responsive user interfaces.
-
-All project requirements, relational schemas, SQL queries, security protocols, and system functional specifications have been documented herein. We look forward to presenting and defending our project before the faculty panel.
-
-Respectfully yours,
-
-Al Philippe Abrenzosa Garado
-Christian Jake Gerson
-Jan Gethree Abrenzosa Piczon
-Ian Dane Saya-ang
-Jon Michael Quimiguing Young
-
-Project Team Members
 ```
++-----------------------------------------------------------------------------------------------------------------------+
+| PUBLIC PORTAL LANE                                                                                                    |
+|  (Start) ──> Citizen Spots Animal in Distress ──> Fills Species, Location & Details ──> Submits Incident Report ──> (x)|
++-----------------------------------------------------------------------------------------------------------------------+
+                                                               |
+                                                               v
++-----------------------------------------------------------------------------------------------------------------------+
+| DISPATCH CONSOLE LANE                                                                                                 |
+|  Dispatcher Receives Alert ──> Reviews Severity & Location ──> Is Report Valid? ──[NO]──> Close Report / Dismiss     |
+|                                                                 │                                                     |
+|                                                               [YES]                                                   |
+|                                                                 ▼                                                     |
+|                                                     Promote to Rescue Case (RC-2026-XXXX)                             |
+|                                                     Assign Rescue Team & Housing Shelter                              |
++-----------------------------------------------------------------------------------------------------------------------+
+                                                               |
+                                                               v
++-----------------------------------------------------------------------------------------------------------------------+
+| FIELD RESCUE OPERATION LANE                                                                                           |
+|  Rescuers Receive Alert ──> Update Status: 'EN_ROUTE' ──> Arrive at Scene & Secure Animal ──> Update Status: 'RESCUED'|
++-----------------------------------------------------------------------------------------------------------------------+
+                                                               |
+                                                               v
++-----------------------------------------------------------------------------------------------------------------------+
+| SHELTER INTAKE & VETERINARY REHABILITATION LANE                                                                       |
+|  Shelter Intake: Register Animal Profile ──> Vet Examination ──> Log Diagnosis, Treatment & Medication                |
+|                                                                                 │                                     |
+|                                                                       Rehabilitation Outcome                          |
+|                                                                       ┌─────────┴─────────┐                           |
+|                                                                       ▼                   ▼                           |
+|                                                                  Adoptable            Wild/Feral                      |
+|                                                                       │                   │                           |
+|                                                                       ▼                   ▼                           |
+|                                                                Adopted Out         Released to Habitat                |
+|                                                                 (End - Closed)      (End - Closed)                    |
++-----------------------------------------------------------------------------------------------------------------------+
+```
+
+### 2. BPMN Process Workflow Description
+* **Stage 1 — Public Emergency Intake:** Citizens submit emergency reports via the public portal capturing reporter name, species, estimated severity (`Critical`, `High`, `Medium`, `Low`), location coordinates, and photo uploads.
+* **Stage 2 — Dispatch Review & Case Promotion:** Central dispatchers review incoming reports in real time, filtering by urgency. Valid reports are promoted into formal Rescue Cases (`RC-2026-XXXX`) and assigned to active field rescue units and target housing shelters. Invalid or duplicate reports are archived.
+* **Stage 3 — Field Dispatch Execution:** Assigned field rescuers receive dispatch alerts, update case statuses to `EN_ROUTE`, locate and secure the animal at the scene, update status to `RESCUED`, and transport the animal to the assigned shelter.
+* **Stage 4 — Shelter Intake & Veterinary Rehabilitation:** Intake staff register the admitted animal profile, updating status to `SHELTER_INTAKE`. Clinic veterinarians perform physical evaluations, logging diagnoses, medications, and treatment plans (`UNDER_TREATMENT`). Upon recovery, the animal is marked as `ADOPTED` or `RELEASED`.
 
 <div style="page-break-after: always;"></div>
 
 ---
 
-## Appendix B. Stakeholder Interview Guide & Questionnaire
+## Appendix B. phpMyAdmin / MySQL Relational ERD & Data Dictionary
 
-### Overview
-During the requirements gathering phase, semi-structured interviews were conducted with key stakeholders, including shelter coordinators, field rescuers, and clinic veterinarians. Below is the interview guide used to formulate the system SRS.
+### 1. phpMyAdmin / MySQL Relational ERD Schema View
+The relational schema engineered in **phpMyAdmin / MySQL 8.0** via Prisma ORM follows **3rd Normal Form (3NF)** with strict InnoDB foreign key constraint cascades (`CASCADE` / `SET NULL`):
 
-### Section 1: General Operations & Intake (Shelter Managers)
-1. **How are animal rescue calls currently received and recorded by your organization?**  
-   *Findings:* Calls are received via personal phone calls, Facebook messages, or walk-ins. Records are manually written on logbooks, leading to lost contact information and untracked incidents.
-2. **What challenges do you experience when managing shelter capacity?**  
-   *Findings:* Staff have no quick way to see how many free kennels exist across affiliated shelters, resulting in overcrowding at primary shelters while secondary shelters remain underutilized.
+```
+                  +-------------------+
+                  |      Shelter      |
+                  +-------------------+
+                  | PK  id            | <─────────────┐
+                  |     shelter_name  |               │
+                  |     capacity      |               │
+                  |     address       |               │
+                  |     contact_number|               │
+                  +-------------------+               │
+                            │ 1                       │ 1
+                            │                         │
+                            │ 0..M                    │ 0..M
+                            v                         │
+                  +-------------------+               │
+                  |       Animal      |               │
+                  +-------------------+               │
+                  | PK  id            |               │
+                  | FK  species_id    | ───┐          │
+                  | FK  ticket_id     |    │          │
+                  | FK  shelter_id    | ───┼──────────┘
+                  |     name          |    │
+                  |     breed         |    │
+                  |     sex           |    │
+                  |     weight        |    │
+                  |     condition     |    │
+                  |     status        |    │
+                  +-------------------+    │
+                            │ 1            │
+                            │              │
+                            │ 0..M         │
+                            v              │
+                  +-------------------+    │
+                  |  Animal_Treatment |    │
+                  +-------------------+    │
+                  | PK  id            |    │
+                  | FK  animal_id     |    │
+                  | FK  vet_agent_id  |    │
+                  | FK  ticket_id     |    │
+                  |     diagnosis     |    │
+                  |     treatment     |    │
+                  |     medication    |    │
+                  |     followup_date |    │
+                  +-------------------+    │
+                                           │
+                                           │
++-------------------+             +────────┴──────────+
+|  Incident_Report  |             |      Species      |
++-------------------+             +-------------------+
+| PK  id            |             | PK  id            |
+| FK  species_id    | ──────────> |     species_name  |
+|     reporter_name |             +-------------------+
+|     severity      |
+|     status        |
+|     location      |
+|     description   |
++-------------------+
+          │ 1
+          │
+          │ 0..1
+          v
++-------------------+             +-------------------+
+|       Ticket      |             |       Agent       |
++-------------------+             +-------------------+
+| PK  id            |             | PK  id            |
+| FK  incident_id   |             | FK  role_id       | ──────> +-------------------+
+| FK  team_id       | <─────────  | FK  team_id       |         |        Role       |
+|     subject       | 1      0..M |     first_name    |         +-------------------+
+|     status        |             |     last_name     |         | PK  id            |
+|     priority      |             |     email         |         |     role_name     |
+|     rescue_notes  |             +-------------------+         +-------------------+
++-------------------+                       │ 1
+                                            │
+                                            │ 0..M
+                                            v
+                                  +-------------------+
+                                  |    ActivityLog    |
+                                  +-------------------+
+                                  | PK  id            |
+                                  |     timestamp     |
+                                  |     entity_type   |
+                                  |     entity_id     |
+                                  |     action        |
+                                  |     user          |
+                                  +-------------------+
+```
 
-### Section 2: Field Operations & Rescues (Field Rescuers)
-3. **What information is most critical when responding to an emergency report in the field?**  
-   *Findings:* Accurate location landmarks, citizen contact numbers, animal species, and severity level (e.g., severe injury vs. stray pickup).
-4. **How do you update the status of a rescue operation?**  
-   *Findings:* Rescuers text or call coordinators. They requested a simple mobile interface to update status stages (`ASSIGNED` ➔ `EN_ROUTE` ➔ `RESCUED`).
+### 2. phpMyAdmin Data Dictionary & Table Structure Descriptions
 
-### Section 3: Medical Care & Rehabilitation (Veterinarians)
-5. **How are medical diagnoses, treatments, and prescriptions currently recorded?**  
-   *Findings:* Treatments are noted on physical paper charts attached to kennels. Charts frequently get lost or damaged during shelter transfers.
-6. **What system capabilities are necessary for veterinary tracking?**  
-   *Findings:* A digital medical log tied to the animal's unique ID where veterinarians can input diagnosis, medications, treatment descriptions, and scheduled follow-up checkups.
+#### Table 1: `Shelter`
+* **Description:** Stores housing shelter facilities, capacity limits, and contact information.
+* **Fields:** `id` (INT, PK, Auto-Increment), `shelter_name` (VARCHAR 255), `address` (TEXT), `contact_number` (VARCHAR 50), `capacity` (INT), `created_at` (DATETIME).
+
+#### Table 2: `Species`
+* **Description:** Lookup reference table for animal species classifications.
+* **Fields:** `id` (INT, PK, Auto-Increment), `species_name` (VARCHAR 100, UNIQUE). *(Values: Dog, Cat, Bird, Other)*.
+
+#### Table 3: `Role`
+* **Description:** User privilege tier definitions for System RBAC security.
+* **Fields:** `id` (INT, PK, Auto-Increment), `role_name` (VARCHAR 50, UNIQUE). *(Values: Admin, Dispatcher, Veterinarian, Rescuer)*.
+
+#### Table 4: `Agent`
+* **Description:** System user accounts including field rescuers, veterinarians, dispatchers, and administrators.
+* **Fields:** `id` (INT, PK, Auto-Increment), `first_name` (VARCHAR 100), `last_name` (VARCHAR 100), `email` (VARCHAR 255, UNIQUE), `password` (VARCHAR 255), `phone` (VARCHAR 50), `role_id` (INT, FK ➔ `Role.id`), `team_id` (INT, FK ➔ `Team.id`, NULLABLE), `status` (ENUM: 'Active', 'Inactive').
+
+#### Table 5: `Team`
+* **Description:** Field rescue teams and responder units assigned to dispatches.
+* **Fields:** `id` (INT, PK, Auto-Increment), `team_name` (VARCHAR 100), `manager_agent_id` (INT, FK ➔ `Agent.id`), `base_shelter_id` (INT, FK ➔ `Shelter.id`).
+
+#### Table 6: `Incident_Report`
+* **Description:** Public emergency distress submissions sent by citizens.
+* **Fields:** `id` (INT, PK, Auto-Increment), `reporter_name` (VARCHAR 255), `contact_number` (VARCHAR 50), `is_anonymous` (BOOLEAN), `species_id` (INT, FK ➔ `Species.id`), `severity` (ENUM: 'Low', 'Medium', 'High', 'Critical'), `status` (ENUM: 'Pending', 'Approved', 'Rejected'), `location` (TEXT), `latitude` (DOUBLE), `longitude` (DOUBLE), `description` (TEXT), `created_at` (DATETIME).
+
+#### Table 7: `Ticket`
+* **Description:** Master operational rescue cases (`RC-2026-XXXX`) promoted from verified incident reports.
+* **Fields:** `id` (INT, PK, Auto-Increment), `subject` (VARCHAR 255), `incident_report_id` (INT, FK ➔ `Incident_Report.id`, UNIQUE), `rescue_date` (DATETIME), `rescue_notes` (TEXT), `status` (ENUM: 'REPORTED', 'ASSIGNED', 'EN_ROUTE', 'RESCUED', 'SHELTER_INTAKE', 'UNDER_TREATMENT', 'RECOVERED', 'ADOPTED', 'RELEASED'), `priority` (ENUM: 'Low', 'Medium', 'High', 'Critical'), `current_assigned_team_id` (INT, FK ➔ `Team.id`), `description` (TEXT), `created_at` (DATETIME).
+
+#### Table 8: `Animal`
+* **Description:** Digital health profiles for admitted animals.
+* **Fields:** `id` (INT, PK, Auto-Increment), `name` (VARCHAR 100), `species_id` (INT, FK ➔ `Species.id`), `breed` (VARCHAR 100), `sex` (VARCHAR 20), `age_estimate` (VARCHAR 50), `weight` (DOUBLE), `condition` (TEXT), `status` (ENUM: 'Intake', 'Under Treatment', 'Recovered', 'Adopted', 'Released'), `photo_url` (TEXT), `ticket_id` (INT, FK ➔ `Ticket.id`, UNIQUE), `shelter_id` (INT, FK ➔ `Shelter.id`), `created_at` (DATETIME).
+
+#### Table 9: `Animal_Treatment`
+* **Description:** Veterinary clinic care logs, surgical treatments, and prescriptions.
+* **Fields:** `id` (INT, PK, Auto-Increment), `animal_id` (INT, FK ➔ `Animal.id`), `vet_agent_id` (INT, FK ➔ `Agent.id`), `ticket_id` (INT, FK ➔ `Ticket.id`), `diagnosis` (TEXT), `treatment` (TEXT), `medication` (TEXT), `notes` (TEXT), `followup_date` (DATETIME), `created_at` (DATETIME).
+
+#### Table 10: `ActivityLog`
+* **Description:** System-wide append-only audit log tracking mutations across all modules.
+* **Fields:** `id` (INT, PK, Auto-Increment), `timestamp` (DATETIME), `entity_type` (VARCHAR 100), `entity_id` (INT), `action` (TEXT), `user` (VARCHAR 255).
