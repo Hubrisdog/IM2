@@ -46,9 +46,10 @@ Instructor
   * **2.6 Access and Security Controls** .................................................----------------- **11**
   * **2.7 Project Schedule (Use Gantt Chart)** ............................................................. **12**
   * **2.8 User Interface** .............................................................................................. **12**
-* **APPENDICES** .......................................................................................................... **13**
-  * **Appendix A. Transmittal Letter** .......................................................................... **13**
-  * **Appendix B. Stakeholder Interview Guide & Questionnaire** .................................. **14**
+* **REFERENCES** .................................................................................----------------........... **13**
+* **APPENDICES** .......................................................................................................... **14**
+  * **Appendix A. Transmittal Letter** .......................................................................... **14**
+  * **Appendix B. Stakeholder Interview Guide & Questionnaire** .................................. **15**
 
 <div style="page-break-after: always;"></div>
 
@@ -440,6 +441,22 @@ The user interface is designed using responsive web aesthetics, featuring high-c
 * **Citizen Incident Portal:** Mobile-first reporting interface with species pickers, location inputs, and photo upload support.
 * **Rescue Cases & Timeline Modal:** Master case registry with a 2-column edit dialog containing the dynamic vertical **Case Journey Timeline**.
 * **Animals & Medical Modules:** Digital registries for shelter intake management and veterinary care tracking.
+
+<div style="page-break-after: always;"></div>
+
+---
+
+# REFERENCES
+
+1. **Elmasri, R., & Navathe, S. B.** (2021). *Fundamentals of Database Systems* (7th ed.). Pearson.
+2. **Fielding, R. T.** (2000). *Architectural styles and the design of network-based software architectures* (Doctoral dissertation, University of California, Irvine).
+3. **Freeman, A.** (2022). *Pro React 18: Building Web Applications with React, TypeScript, and Vite* (3rd ed.). Apress. https://doi.org/10.1007/978-1-4842-8871-9
+4. **Humane Society International.** (2023). *Digital tools for stray animal census, rescue dispatching, and shelter population management*. HSI Technical Reports. https://www.hsi.org/resources/
+5. **Prisma ORM Documentation.** (2026). *Type-safe database client and schema migrations for Node.js and TypeScript*. Prisma Data Inc. https://www.prisma.io/docs/
+6. **Rescorla, E.** (2018). *The Transport Layer Security (TLS) Protocol Version 1.3* (RFC 8446). Internet Engineering Task Force (IETF). https://doi.org/10.17487/RFC8446
+7. **Sandhu, R. S., Coyne, E. J., Feinstein, H. L., & Youman, C. E.** (1996). Role-based access control models. *IEEE Computer*, 29(2), 38-47. https://doi.org/10.1109/2.485845
+8. **Silberschatz, A., Korth, H. F., & Sudarshan, S.** (2020). *Database System Concepts* (7th ed.). McGraw-Hill Education.
+9. **World Organisation for Animal Health.** (2024). *Global standards for stray animal management, rescue dispatches, and shelter welfare operations*. WOAH Terrestrial Animal Health Code, Chapter 7.7. https://www.woah.org/
 
 <div style="page-break-after: always;"></div>
 
