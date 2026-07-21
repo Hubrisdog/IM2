@@ -1,5 +1,11 @@
-import { useState } from 'react'
-import { useRescueHubStore, type RescueCase, type RescueCaseStatusType, type SeverityType, VALID_CASE_TRANSITIONS } from '@/stores/rescue-hub-store'
+import { useState, useMemo } from 'react'
+import {
+  useRescueHubStore,
+  type RescueCase,
+  type RescueCaseStatusType,
+  type SeverityType,
+  VALID_CASE_TRANSITIONS,
+} from '@/stores/rescue-hub-store'
 import { useAuthStore } from '@/stores/auth-store'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -22,60 +28,58 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
-import { Plus, Search, Edit2, Trash2, ShieldAlert, MapPin, Clock } from 'lucide-react'
+import {
+  Plus,
+  Search,
+  Edit2,
+  Trash2,
+  Eye,
+  MapPin,
+  Clock,
+  Car,
+  Building2,
+  Users,
+  FileText,
+  SlidersHorizontal,
+  ChevronLeft,
+  ChevronRight,
+  AlertTriangle,
+  CheckCircle2,
+} from 'lucide-react'
 import { MockMapView } from '@/components/mock-map-view'
+import { getSpeciesPlaceholder } from '@/features/animals/utils/placeholders'
+import { CaseStatsHeader } from './components/case-stats-header'
+import { CaseDetailsDrawer } from './components/case-details-drawer'
 
 export function RescueCases() {
   const store = useRescueHubStore()
   const userRole = useAuthStore((state) => state.auth.user?.role?.[0] || 'Rescuer')
+
+  // Search, Filters & Pagination States
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
+  const [priorityFilter, setPriorityFilter] = useState('All')
+  const [shelterFilter, setShelterFilter] = useState('All')
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 12
 
-  // Dialog States
+  // Dialog & Drawer States
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [isMapOpen, setIsMapOpen] = useState(false)
   const [mapTarget, setMapTarget] = useState<'add' | 'edit'>('add')
 
   const [selectedCase, setSelectedCase] = useState<RescueCase | null>(null)
 
-  // Timeline calculations
-  const caseLogs = selectedCase
-    ? store.activityLogs.filter((log) => {
-        const rawCaseId = selectedCase.id.replace(/^case-/, '')
-        const rawLogId = String(log.entity_id).replace(/^(case|ani|inc|treat)-/, '')
-        const rawIncId = selectedCase.incident_id ? selectedCase.incident_id.replace(/^inc-/, '') : null
-        const rawAnimId = selectedCase.animal_id ? selectedCase.animal_id.replace(/^ani-/, '') : null
-
-        return (
-          (log.entity_type === 'RescueCase' && (log.entity_id === selectedCase.id || rawLogId === rawCaseId)) ||
-          (rawIncId && log.entity_type === 'IncidentReport' && (log.entity_id === selectedCase.incident_id || rawLogId === rawIncId)) ||
-          (rawAnimId && log.entity_type === 'Animal' && (log.entity_id === selectedCase.animal_id || rawLogId === rawAnimId))
-        )
-      })
-    : []
-
-  const sortedLogs = [...caseLogs].sort((a, b) => new Date(a.timestamp || 0).getTime() - new Date(b.timestamp || 0).getTime())
-
-  const formatLogTime = (ts: any) => {
-    if (!ts) return 'Unknown date'
-    const d = new Date(ts)
-    if (isNaN(d.getTime())) return 'Unknown date'
-    try {
-      return d.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })
-    } catch {
-      return d.toLocaleString()
-    }
-  }
-
-  // Add Case Form States
+  // Add Form States
   const [location, setLocation] = useState('')
   const [description, setDescription] = useState('')
   const [severity, setSeverity] = useState<SeverityType>('Medium')
   const [notes, setNotes] = useState('')
 
-  // Edit Case Form States
+  // Edit Form States
   const [editStatus, setEditStatus] = useState<RescueCaseStatusType>('REPORTED')
   const [editRescuerId, setEditRescuerId] = useState('')
   const [editShelterId, setEditShelterId] = useState('')
@@ -84,7 +88,18 @@ export function RescueCases() {
   const [editLocation, setEditLocation] = useState('')
   const [editDescription, setEditDescription] = useState('')
 
+  // Reset pagination on filter change
+  const handleFilterChange = (setter: (val: any) => void, val: any) => {
+    setter(val)
+    setCurrentPage(1)
+  }
+
   // Handlers
+  const handleOpenDrawer = (c: RescueCase) => {
+    setSelectedCase(c)
+    setIsDrawerOpen(true)
+  }
+
   const handleOpenAdd = () => {
     setLocation('')
     setDescription('')
@@ -111,11 +126,11 @@ export function RescueCases() {
       rescuer_id: null,
       shelter_id: null,
       animal_id: null,
-      notes
+      notes,
     })
 
     setIsAddOpen(false)
-    toast.success(`Rescue Case created successfully at ${location}.`)
+    toast.success('Rescue dispatch case registered successfully.')
   }
 
   const handleOpenEdit = (c: RescueCase) => {
@@ -124,7 +139,7 @@ export function RescueCases() {
     setEditRescuerId(c.rescuer_id || '')
     setEditShelterId(c.shelter_id || '')
     setEditSeverity(c.severity)
-    setEditNotes(c.notes)
+    setEditNotes(c.notes || '')
     setEditLocation(c.location)
     setEditDescription(c.description)
     setIsEditOpen(true)
@@ -134,8 +149,7 @@ export function RescueCases() {
     e.preventDefault()
     if (!selectedCase) return
 
-    // Perform updates
-    const errorMsg = store.updateCase(selectedCase.id, {
+    const err = store.updateCase(selectedCase.id, {
       status: editStatus,
       rescuer_id: editRescuerId || null,
       shelter_id: editShelterId || null,
@@ -143,17 +157,15 @@ export function RescueCases() {
       notes: editNotes,
       location: editLocation,
       description: editDescription,
-      // If transitioning to RESCUED, record rescue date
-      rescue_date: editStatus === 'RESCUED' && selectedCase.status !== 'RESCUED' ? new Date().toISOString() : selectedCase.rescue_date
     })
 
-    if (errorMsg) {
-      toast.error(errorMsg)
+    if (err) {
+      toast.error(err)
       return
     }
 
     setIsEditOpen(false)
-    toast.success(`Case ${selectedCase.case_number} updated successfully.`)
+    toast.success(`Rescue Case ${selectedCase.case_number} updated.`)
   }
 
   const handleOpenDelete = (c: RescueCase) => {
@@ -168,90 +180,156 @@ export function RescueCases() {
     toast.success(`Rescue Case ${selectedCase.case_number} deleted.`)
   }
 
-  // Filters
-  const filteredCases = store.cases.filter((c) => {
-    const matchesSearch =
-      c.case_number.toLowerCase().includes(search.toLowerCase()) ||
-      c.location.toLowerCase().includes(search.toLowerCase()) ||
-      c.description.toLowerCase().includes(search.toLowerCase())
+  // Enhanced Filtering
+  const filteredCases = useMemo(() => {
+    return store.cases.filter((c) => {
+      const s = search.toLowerCase()
+      const rawCaseId = c.id.replace(/^case-/, '')
+      const rawCaseAnimId = (c.animal_id || '').replace(/^ani-/, '')
+      const rawCaseRescuerId = (c.rescuer_id || '').replace(/^(res|agt)-/, '')
+      const rawCaseShelterId = (c.shelter_id || '').replace(/^sh-/, '')
 
-    const matchesStatus = statusFilter === 'All' || c.status === statusFilter
+      const rescuer = store.rescuers.find(
+        (r) => r.id === c.rescuer_id || r.id.replace(/^(res|agt)-/, '') === rawCaseRescuerId
+      )
 
-    return matchesSearch && matchesStatus
-  })
+      const shelter = store.shelters.find(
+        (sh) => sh.id === c.shelter_id || sh.id.replace(/^sh-/, '') === rawCaseShelterId
+      )
 
-  // Format Status Badge
-  const getStatusBadge = (st: RescueCaseStatusType) => {
-    switch (st) {
-      case 'REPORTED':
-        return 'bg-amber-100 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 border-amber-500/20'
-      case 'ASSIGNED':
-        return 'bg-blue-100 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border-blue-500/20'
-      case 'EN_ROUTE':
-        return 'bg-purple-100 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 border-purple-500/20'
-      case 'RESCUED':
-        return 'bg-teal-100 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 border-teal-500/20'
-      case 'SHELTER_INTAKE':
-        return 'bg-indigo-100 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 border-indigo-500/20'
-      case 'UNDER_TREATMENT':
-        return 'bg-rose-100 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border-rose-500/20'
-      case 'RECOVERED':
-        return 'bg-emerald-100 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-      case 'ADOPTED':
-        return 'bg-green-100 dark:bg-green-950/30 text-green-600 dark:text-green-400 border-green-500/20'
-      case 'RELEASED':
-        return 'bg-cyan-100 dark:bg-cyan-950/30 text-cyan-600 dark:text-cyan-400 border-cyan-500/20'
-      case 'CLOSED':
-        return 'bg-slate-100 dark:bg-slate-900/40 text-slate-500 border-slate-500/20'
+      const animal = store.animals.find(
+        (a) =>
+          a.id === c.animal_id ||
+          (rawCaseAnimId && a.id.replace(/^ani-/, '') === rawCaseAnimId) ||
+          a.case_id === c.id ||
+          (a.case_id && a.case_id.replace(/^case-/, '') === rawCaseId)
+      )
+
+      const matchesSearch =
+        c.case_number.toLowerCase().includes(s) ||
+        c.location.toLowerCase().includes(s) ||
+        c.description.toLowerCase().includes(s) ||
+        c.status.toLowerCase().includes(s) ||
+        (animal && animal.name.toLowerCase().includes(s)) ||
+        (rescuer && rescuer.name.toLowerCase().includes(s)) ||
+        (shelter && shelter.name.toLowerCase().includes(s))
+
+      const matchesStatus = statusFilter === 'All' || c.status === statusFilter
+      const matchesPriority = priorityFilter === 'All' || c.severity === priorityFilter
+      const matchesShelter =
+        shelterFilter === 'All' ||
+        c.shelter_id === shelterFilter ||
+        (shelter && shelter.id === shelterFilter)
+
+      return matchesSearch && matchesStatus && matchesPriority && matchesShelter
+    })
+  }, [store.cases, store.animals, store.rescuers, store.shelters, search, statusFilter, priorityFilter, shelterFilter])
+
+  // Pagination calculation
+  const totalItems = filteredCases.length
+  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage))
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const paginatedCases = filteredCases.slice(startIndex, startIndex + itemsPerPage)
+
+  // Pending Incidents Count
+  const pendingIncidentsCount = store.incidents.filter((inc) => inc.status === 'Pending').length
+
+  // High-Impact Priority Badges
+  const getPriorityBadge = (priority: SeverityType) => {
+    switch (priority) {
+      case 'Critical':
+        return <Badge className='bg-red-500 text-white font-bold gap-1 text-[11px] shadow-sm'>🔴 Critical</Badge>
+      case 'High':
+        return <Badge className='bg-amber-500 text-slate-950 font-bold gap-1 text-[11px] shadow-sm'>🟠 High</Badge>
+      case 'Medium':
+        return <Badge className='bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-yellow-500/30 font-semibold text-[11px]'>🟡 Medium</Badge>
+      case 'Low':
+      default:
+        return <Badge className='bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 font-semibold text-[11px]'>🟢 Low</Badge>
     }
   }
 
-  const getSeverityColor = (sev: SeverityType) => {
-    switch (sev) {
-      case 'Critical':
-        return 'bg-red-500/10 text-red-500 border-red-500/20'
-      case 'High':
-        return 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-      case 'Medium':
-        return 'bg-blue-500/10 text-blue-500 border-blue-500/20'
-      case 'Low':
-        return 'bg-slate-500/10 text-slate-500 border-slate-500/20'
+  // Progress Percentage & Stage Derivation
+  const getStageProgress = (st: RescueCaseStatusType) => {
+    switch (st) {
+      case 'REPORTED':
+        return { pct: 20, stage: 'Reported' }
+      case 'ASSIGNED':
+        return { pct: 40, stage: 'Assigned' }
+      case 'EN_ROUTE':
+        return { pct: 60, stage: 'En Route' }
+      case 'RESCUED':
+        return { pct: 75, stage: 'Rescued' }
+      case 'SHELTER_INTAKE':
+      case 'UNDER_TREATMENT':
+        return { pct: 90, stage: 'Intake / Treatment' }
+      case 'RECOVERED':
+      case 'ADOPTED':
+      case 'RELEASED':
+      case 'CLOSED':
+      default:
+        return { pct: 100, stage: 'Resolved' }
     }
+  }
+
+  // Simulated ETA Indicator
+  const getETA = (st: RescueCaseStatusType, idStr: string) => {
+    if (st === 'EN_ROUTE') {
+      const mins = ((idStr.length * 7) % 20) + 8
+      return <span className='text-[10px] font-mono text-blue-600 dark:text-blue-400 font-bold bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20'>ETA: {mins} mins</span>
+    } else if (st === 'RESCUED') {
+      return <span className='text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20'>On Scene</span>
+    } else if (['SHELTER_INTAKE', 'UNDER_TREATMENT', 'RECOVERED', 'ADOPTED', 'RELEASED', 'CLOSED'].includes(st)) {
+      return <span className='text-[10px] font-mono text-muted-foreground bg-muted px-1.5 py-0.5 rounded'>Completed</span>
+    }
+    return <span className='text-[10px] font-mono text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20'>Pending Dispatch</span>
   }
 
   return (
-    <div className='flex-1 space-y-4 p-8 pt-6'>
-      <div className='flex items-center justify-between space-y-2'>
+    <div className='flex-1 space-y-4 p-8 pt-6 max-w-[1600px] mx-auto'>
+      {/* Module Title Header & Action Button */}
+      <div className='flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2 border-b'>
         <div>
-          <h2 className='text-3xl font-bold tracking-tight'>Rescue Cases</h2>
-          <p className='text-muted-foreground'>
+          <h2 className='text-3xl font-black tracking-tight text-foreground flex items-center gap-2'>
+            🚨 Rescue Operations Command Center
+          </h2>
+          <p className='text-xs text-muted-foreground mt-0.5'>
             Coordinate active dispatches, assign responders and shelters, and track cases through completion.
           </p>
         </div>
+
         {(userRole === 'Admin' || userRole === 'Dispatcher') && (
-          <Button onClick={handleOpenAdd} className='flex gap-2'>
-            <Plus className='h-4 w-4' /> Register Case
+          <Button onClick={handleOpenAdd} size='sm' className='flex gap-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'>
+            <Plus className='h-4 w-4' /> Register Case Dispatch
           </Button>
         )}
       </div>
 
-      {/* Filters */}
-      <div className='flex flex-wrap items-center justify-between gap-4 py-4 bg-muted/20 p-4 rounded-lg border'>
-        <div className='flex items-center gap-2 max-w-sm w-full'>
-          <Search className='h-4 w-4 text-muted-foreground' />
+      {/* 1. Summary Statistics Header Cards */}
+      <CaseStatsHeader cases={store.cases} pendingIncidentsCount={pendingIncidentsCount} />
+
+      {/* Toolbar: Search, Filters */}
+      <div className='flex flex-wrap items-center justify-between gap-3 bg-card p-3 rounded-xl border shadow-sm'>
+        {/* Search Bar */}
+        <div className='flex items-center gap-2 max-w-md w-full'>
+          <Search className='h-4 w-4 text-muted-foreground shrink-0' />
           <Input
-            placeholder='Search Case Number, location, description...'
+            placeholder='Search Case Number, animal name, rescuer, shelter, location...'
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className='h-9'
+            onChange={(e) => handleFilterChange(setSearch, e.target.value)}
+            className='h-9 text-xs'
           />
         </div>
-        <div className='flex items-center gap-2'>
-          <span className='text-sm font-medium'>Status Filter:</span>
+
+        {/* Filters */}
+        <div className='flex items-center gap-2 flex-wrap ml-auto text-xs'>
+          <SlidersHorizontal className='h-3.5 w-3.5 text-muted-foreground' />
+
+          {/* Status Filter */}
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className='flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring'
+            onChange={(e) => handleFilterChange(setStatusFilter, e.target.value)}
+            className='flex h-9 rounded-md border border-input bg-background px-2.5 py-1 text-xs shadow-sm focus:outline-none focus:ring-1 focus:ring-ring text-foreground font-medium'
           >
             <option value='All'>All Statuses</option>
             <option value='REPORTED'>REPORTED</option>
@@ -261,37 +339,62 @@ export function RescueCases() {
             <option value='SHELTER_INTAKE'>SHELTER_INTAKE</option>
             <option value='UNDER_TREATMENT'>UNDER_TREATMENT</option>
             <option value='RECOVERED'>RECOVERED</option>
-            <option value='ADOPTED'>ADOPTED</option>
-            <option value='RELEASED'>RELEASED</option>
             <option value='CLOSED'>CLOSED</option>
+          </select>
+
+          {/* Priority Filter */}
+          <select
+            value={priorityFilter}
+            onChange={(e) => handleFilterChange(setPriorityFilter, e.target.value)}
+            className='flex h-9 rounded-md border border-input bg-background px-2.5 py-1 text-xs shadow-sm focus:outline-none focus:ring-1 focus:ring-ring text-foreground font-medium'
+          >
+            <option value='All'>All Priorities</option>
+            <option value='Critical'>Critical</option>
+            <option value='High'>High</option>
+            <option value='Medium'>Medium</option>
+            <option value='Low'>Low</option>
+          </select>
+
+          {/* Shelter Filter */}
+          <select
+            value={shelterFilter}
+            onChange={(e) => handleFilterChange(setShelterFilter, e.target.value)}
+            className='flex h-9 rounded-md border border-input bg-background px-2.5 py-1 text-xs shadow-sm focus:outline-none focus:ring-1 focus:ring-ring text-foreground font-medium'
+          >
+            <option value='All'>All Shelters</option>
+            {store.shelters.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
           </select>
         </div>
       </div>
 
-      {/* Cases Table */}
-      <div className='rounded-md border bg-card'>
+      {/* Operations Center Table */}
+      <div className='rounded-xl border bg-card overflow-hidden shadow-sm transition-all duration-300 animate-in fade-in-50'>
         <Table>
-          <TableHeader>
+          <TableHeader className='bg-muted/20'>
             <TableRow>
-              <TableHead>Case #</TableHead>
-              <TableHead>Location</TableHead>
-              <TableHead>Animal</TableHead>
-              <TableHead>Rescuer</TableHead>
-              <TableHead>Shelter</TableHead>
-              <TableHead>Severity</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className='text-right'>Actions</TableHead>
+              <TableHead className='w-[100px]'>Case #</TableHead>
+              <TableHead>Target Animal</TableHead>
+              <TableHead>Rescuer & Team</TableHead>
+              <TableHead>Shelter Station</TableHead>
+              <TableHead>Priority</TableHead>
+              <TableHead>Dispatch Progress</TableHead>
+              <TableHead>ETA Status</TableHead>
+              <TableHead className='text-right'>Quick Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredCases.length === 0 ? (
+            {paginatedCases.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className='h-24 text-center text-muted-foreground'>
-                  No rescue dispatches logged yet. Click "Register Case" or approve an Incident Report to begin a rescue operation.
+                <TableCell colSpan={8} className='h-32 text-center text-muted-foreground'>
+                  No rescue dispatches match your search or filter criteria.
                 </TableCell>
               </TableRow>
             ) : (
-              filteredCases.map((c) => {
+              paginatedCases.map((c) => {
                 const rawCaseId = (c.id || '').replace(/^case-/, '')
                 const rawCaseAnimId = (c.animal_id || '').replace(/^ani-/, '')
                 const rawCaseRescuerId = (c.rescuer_id || '').replace(/^(res|agt)-/, '')
@@ -318,43 +421,146 @@ export function RescueCases() {
                   )
                 })
 
+                // Team name derivation
+                const teamName =
+                  rescuer?.role === 'Veterinarian'
+                    ? 'Medical Care Team'
+                    : rescuer?.role === 'Dispatcher'
+                    ? 'Dispatch Center'
+                    : rescuer?.team_id?.includes('1')
+                    ? 'Rescue Team Alpha'
+                    : 'Field Unit Bravo'
+
+                // Shelter Occupancy
+                const shelterOccupancy = shelter
+                  ? store.animals.filter(
+                      (a) =>
+                        (a.shelter_id === shelter.id || a.shelter_id?.replace(/^sh-/, '') === shelter.id.replace(/^sh-/, '')) &&
+                        a.status !== 'Adopted' &&
+                        a.status !== 'Released'
+                    ).length
+                  : 0
+
+                const progress = getStageProgress(c.status)
+
                 return (
-                  <TableRow key={c.id}>
-                    <TableCell className='font-mono font-bold text-sm text-blue-600 dark:text-blue-400'>
+                  <TableRow
+                    key={c.id}
+                    className='hover:bg-muted/30 cursor-pointer transition-colors'
+                    onClick={() => handleOpenDrawer(c)}
+                  >
+                    {/* Case Number */}
+                    <TableCell className='font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400'>
                       {c.case_number}
                     </TableCell>
-                    <TableCell className='max-w-[200px] truncate'>{c.location}</TableCell>
-                    <TableCell>{animal ? animal.name : <span className='text-muted-foreground italic text-xs'>None</span>}</TableCell>
-                    <TableCell>{rescuer ? rescuer.name : <span className='text-muted-foreground italic text-xs'>Unassigned</span>}</TableCell>
-                    <TableCell>{shelter ? shelter.name : <span className='text-muted-foreground italic text-xs'>Unassigned</span>}</TableCell>
+
+                    {/* Animal */}
                     <TableCell>
-                      <Badge className={getSeverityColor(c.severity)} variant='outline'>
-                        {c.severity}
-                      </Badge>
+                      {animal ? (
+                        <div className='flex items-center gap-2.5'>
+                          <img
+                            src={animal.photo_url || getSpeciesPlaceholder(animal.species)}
+                            alt={animal.name}
+                            className='h-8 w-8 rounded-lg object-cover border bg-slate-800 shrink-0'
+                          />
+                          <div className='overflow-hidden space-y-0.5'>
+                            <div className='font-bold text-xs text-foreground truncate'>{animal.name}</div>
+                            <div className='text-[10px] text-muted-foreground truncate'>{animal.species} • {animal.breed}</div>
+                          </div>
+                        </div>
+                      ) : (
+                        <span className='text-xs text-amber-600 dark:text-amber-400 font-semibold italic flex items-center gap-1'>
+                          <AlertTriangle className='h-3 w-3' /> Intake Pending
+                        </span>
+                      )}
                     </TableCell>
-                    <TableCell>
-                      <Badge className={getStatusBadge(c.status)} variant='outline'>
-                        {c.status}
-                      </Badge>
+
+                    {/* Rescuer & Team */}
+                    <TableCell className='text-xs'>
+                      {rescuer ? (
+                        <div className='space-y-0.5'>
+                          <span className='font-bold text-foreground block truncate'>
+                            👤 {rescuer.name}
+                          </span>
+                          <span className='text-[10px] text-muted-foreground block truncate flex items-center gap-1'>
+                            <Car className='h-2.5 w-2.5 text-blue-500' /> {teamName}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className='text-xs text-amber-600 dark:text-amber-400 font-semibold italic flex items-center gap-1'>
+                          ⚠️ Waiting Dispatcher
+                        </span>
+                      )}
                     </TableCell>
-                    <TableCell className='text-right'>
+
+                    {/* Shelter & Capacity */}
+                    <TableCell className='text-xs'>
+                      {shelter ? (
+                        <div className='space-y-0.5'>
+                          <span className='font-medium text-foreground block truncate flex items-center gap-1'>
+                            <Building2 className='h-3 w-3 text-emerald-500' /> {shelter.name}
+                          </span>
+                          <span className='text-[10px] font-mono text-muted-foreground block'>
+                            Beds: {shelterOccupancy} / {shelter.capacity}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className='text-xs text-muted-foreground italic'>Unassigned Station</span>
+                      )}
+                    </TableCell>
+
+                    {/* Priority */}
+                    <TableCell>{getPriorityBadge(c.severity)}</TableCell>
+
+                    {/* Dispatch Progress */}
+                    <TableCell className='w-[140px]'>
+                      <div className='space-y-1'>
+                        <div className='flex items-center justify-between text-[10px] font-semibold'>
+                          <span className='text-muted-foreground truncate'>{progress.stage}</span>
+                          <span className='text-emerald-600 dark:text-emerald-400 font-mono font-bold'>{progress.pct}%</span>
+                        </div>
+                        <div className='h-1.5 w-full bg-muted rounded-full overflow-hidden'>
+                          <div
+                            className='h-full bg-emerald-500 rounded-full transition-all duration-500'
+                            style={{ width: `${progress.pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    </TableCell>
+
+                    {/* ETA Status */}
+                    <TableCell>{getETA(c.status, c.id)}</TableCell>
+
+                    {/* Quick Actions */}
+                    <TableCell className='text-right' onClick={(e) => e.stopPropagation()}>
                       <div className='flex items-center justify-end gap-1'>
+                        <Button
+                          variant='ghost'
+                          size='sm'
+                          className='h-7 px-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 gap-1'
+                          onClick={() => handleOpenDrawer(c)}
+                          title='View Case Details'
+                        >
+                          <Eye className='h-3.5 w-3.5' /> View
+                        </Button>
                         {(userRole === 'Admin' || userRole === 'Dispatcher' || userRole === 'Rescuer') && (
                           <Button
                             variant='ghost'
-                            size='icon'
-                            className='h-8 w-8 text-muted-foreground'
+                            size='sm'
+                            className='h-7 px-2 text-xs font-semibold text-muted-foreground hover:bg-muted gap-1'
                             onClick={() => handleOpenEdit(c)}
+                            title='Update Dispatch Status'
                           >
-                            <Edit2 className='h-3.5 w-3.5' />
+                            <Edit2 className='h-3.5 w-3.5' /> Edit
                           </Button>
                         )}
                         {userRole === 'Admin' && (
                           <Button
                             variant='ghost'
                             size='icon'
-                            className='h-8 w-8 text-rose-500 hover:bg-rose-500/10 hover:text-rose-500'
+                            className='h-7 w-7 text-rose-500 hover:bg-rose-500/10'
                             onClick={() => handleOpenDelete(c)}
+                            title='Delete Case'
                           >
                             <Trash2 className='h-3.5 w-3.5' />
                           </Button>
@@ -369,68 +575,79 @@ export function RescueCases() {
         </Table>
       </div>
 
+      {/* Pagination Bar */}
+      {totalItems > 0 && (
+        <div className='flex flex-col sm:flex-row items-center justify-between gap-3 bg-card p-3 rounded-xl border shadow-sm text-xs'>
+          <span className='text-muted-foreground font-medium'>
+            Showing <strong className='text-foreground font-mono'>{startIndex + 1}–{Math.min(startIndex + itemsPerPage, totalItems)}</strong> of <strong className='text-foreground font-mono'>{totalItems}</strong> rescue cases
+          </span>
+
+          <div className='flex items-center gap-1.5'>
+            <Button
+              variant='outline'
+              size='sm'
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className='h-8 text-xs gap-1 font-semibold'
+            >
+              <ChevronLeft className='h-3.5 w-3.5' /> Previous
+            </Button>
+
+            <div className='flex items-center gap-1 px-2 font-mono text-xs font-bold text-muted-foreground'>
+              Page <span className='text-foreground font-extrabold'>{currentPage}</span> of {totalPages}
+            </div>
+
+            <Button
+              variant='outline'
+              size='sm'
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className='h-8 text-xs gap-1 font-semibold'
+            >
+              Next <ChevronRight className='h-3.5 w-3.5' />
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Add Dialog */}
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-        <DialogContent onPointerDownOutside={(e) => e.preventDefault()}>
+        <DialogContent>
           <form onSubmit={handleAddSubmit}>
             <DialogHeader>
-              <DialogTitle>Register Rescue Case</DialogTitle>
-              <DialogDescription>Manually log a new animal rescue incident.</DialogDescription>
+              <DialogTitle>Register Rescue Dispatch Case</DialogTitle>
+              <DialogDescription>Create a new emergency dispatch case.</DialogDescription>
             </DialogHeader>
             <div className='grid gap-4 py-4'>
               <div className='space-y-1'>
-                <span className='text-sm font-medium'>Location</span>
+                <span className='text-sm font-medium'>Incident Location</span>
                 <div className='flex gap-2'>
-                  <Input
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    placeholder='e.g., 54 Elm St, Metro Area'
-                    required
-                    className='flex-1'
-                  />
-                  <Button
-                    type='button'
-                    variant='outline'
-                    size='icon'
-                    onClick={() => {
-                      setMapTarget('add')
-                      setIsMapOpen(true)
-                    }}
-                    className='shrink-0 h-9 w-9 text-primary'
-                  >
-                    <MapPin className='h-4 w-4' />
+                  <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder='12 Maple St, Riverside' required />
+                  <Button type='button' variant='outline' size='sm' onClick={() => { setMapTarget('add'); setIsMapOpen(true); }}>
+                    Map Pin
                   </Button>
                 </div>
               </div>
-              <div className='space-y-1'>
-                <span className='text-sm font-medium'>Description</span>
-                <Textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder='Describe incident, animal condition, etc...'
-                  required
-                />
+
+              <div className='grid grid-cols-2 gap-4'>
+                <div className='space-y-1'>
+                  <span className='text-sm font-medium'>Priority / Severity</span>
+                  <select
+                    value={severity}
+                    onChange={(e) => setSeverity(e.target.value as SeverityType)}
+                    className='flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm'
+                  >
+                    <option value='Low'>Low</option>
+                    <option value='Medium'>Medium</option>
+                    <option value='High'>High</option>
+                    <option value='Critical'>Critical</option>
+                  </select>
+                </div>
               </div>
+
               <div className='space-y-1'>
-                <span className='text-sm font-medium'>Severity</span>
-                <select
-                  value={severity}
-                  onChange={(e) => setSeverity(e.target.value as SeverityType)}
-                  className='flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm'
-                >
-                  <option value='Low'>Low</option>
-                  <option value='Medium'>Medium</option>
-                  <option value='High'>High</option>
-                  <option value='Critical'>Critical</option>
-                </select>
-              </div>
-              <div className='space-y-1'>
-                <span className='text-sm font-medium'>Notes</span>
-                <Textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder='Initial dispatcher notes...'
-                />
+                <span className='text-sm font-medium'>Description & Dispatch Notes</span>
+                <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder='Describe animal distress situation...' required />
               </div>
             </div>
             <DialogFooter>
@@ -445,178 +662,97 @@ export function RescueCases() {
 
       {/* Edit Dialog */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className='sm:max-w-4xl' onPointerDownOutside={(e) => e.preventDefault()}>
+        <DialogContent className='sm:max-w-lg'>
           {selectedCase && (
             <form onSubmit={handleEditSubmit}>
               <DialogHeader>
                 <DialogTitle>Update Case {selectedCase.case_number}</DialogTitle>
-                <DialogDescription>
-                  Modify dispatch settings, assign rescuers/shelters, and progress statuses.
-                </DialogDescription>
+                <DialogDescription>Advance dispatch status or reassign personnel & shelter.</DialogDescription>
               </DialogHeader>
-              
-              <div className='grid grid-cols-1 lg:grid-cols-7 gap-6 py-4'>
-                {/* Left Column: Form Fields */}
-                <div className='lg:col-span-4 space-y-4 h-[480px] overflow-y-auto pr-4 border-r border-border'>
-                  <div className='space-y-1 bg-amber-500/5 p-3 rounded-lg border border-amber-500/10 text-xs flex flex-col gap-1'>
-                    <span className='font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1'>
-                      <ShieldAlert className='h-3.5 w-3.5' /> Status Workflow Guidelines
-                    </span>
-                    <span>
-                      Cases must flow through sequential stages. The dropdown below restricts choices to valid next states.
-                    </span>
-                  </div>
-
-                  <div className='grid grid-cols-2 gap-4'>
-                    <div className='space-y-1'>
-                      <span className='text-sm font-medium'>Status</span>
-                      <select
-                        value={editStatus}
-                        onChange={(e) => setEditStatus(e.target.value as RescueCaseStatusType)}
-                        className='flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm'
-                      >
-                        {/* Current Status */}
-                        <option value={selectedCase.status}>{selectedCase.status} (Current)</option>
-                        {/* Valid Next Transitions */}
-                        {VALID_CASE_TRANSITIONS[selectedCase.status]?.map((st) => (
-                          <option key={st} value={st}>
-                            ➔ {st}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className='space-y-1'>
-                      <span className='text-sm font-medium'>Severity</span>
-                      <select
-                        value={editSeverity}
-                        onChange={(e) => setEditSeverity(e.target.value as SeverityType)}
-                        className='flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm'
-                      >
-                        <option value='Low'>Low</option>
-                        <option value='Medium'>Medium</option>
-                        <option value='High'>High</option>
-                        <option value='Critical'>Critical</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className='grid grid-cols-2 gap-4'>
-                    <div className='space-y-1'>
-                      <span className='text-sm font-medium'>Assigned Rescuer</span>
-                      <select
-                        value={editRescuerId}
-                        onChange={(e) => setEditRescuerId(e.target.value)}
-                        className='flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm'
-                      >
-                        <option value=''>Unassigned</option>
-                        {store.rescuers.map((r) => (
-                          <option key={r.id} value={r.id}>
-                            {r.name} ({r.availability})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className='space-y-1'>
-                      <span className='text-sm font-medium'>Current Shelter</span>
-                      <select
-                        value={editShelterId}
-                        onChange={(e) => setEditShelterId(e.target.value)}
-                        className='flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm'
-                      >
-                        <option value=''>Unassigned</option>
-                        {store.shelters.map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {s.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+              <div className='grid gap-4 py-4 h-105 overflow-y-auto pr-2'>
+                <div className='grid grid-cols-2 gap-4'>
+                  <div className='space-y-1'>
+                    <span className='text-sm font-medium'>Dispatch Status</span>
+                    <select
+                      value={editStatus}
+                      onChange={(e) => setEditStatus(e.target.value as RescueCaseStatusType)}
+                      className='flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm'
+                    >
+                      <option value='REPORTED'>REPORTED</option>
+                      <option value='ASSIGNED'>ASSIGNED</option>
+                      <option value='EN_ROUTE'>EN_ROUTE</option>
+                      <option value='RESCUED'>RESCUED</option>
+                      <option value='SHELTER_INTAKE'>SHELTER_INTAKE</option>
+                      <option value='UNDER_TREATMENT'>UNDER_TREATMENT</option>
+                      <option value='RECOVERED'>RECOVERED</option>
+                      <option value='CLOSED'>CLOSED</option>
+                    </select>
                   </div>
 
                   <div className='space-y-1'>
-                    <span className='text-sm font-medium'>Location</span>
-                    <div className='flex gap-2'>
-                      <Input
-                        value={editLocation}
-                        onChange={(e) => setEditLocation(e.target.value)}
-                        required
-                        className='flex-1'
-                      />
-                      <Button
-                        type='button'
-                        variant='outline'
-                        size='icon'
-                        onClick={() => {
-                          setMapTarget('edit')
-                          setIsMapOpen(true)
-                        }}
-                        className='shrink-0 h-9 w-9 text-primary'
-                      >
-                        <MapPin className='h-4 w-4' />
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className='space-y-1'>
-                    <span className='text-sm font-medium'>Incident Description</span>
-                    <Textarea
-                      value={editDescription}
-                      onChange={(e) => setEditDescription(e.target.value)}
-                      required
-                    />
-                  </div>
-
-                  <div className='space-y-1'>
-                    <span className='text-sm font-medium'>Case Notes</span>
-                    <Textarea
-                      value={editNotes}
-                      onChange={(e) => setEditNotes(e.target.value)}
-                      placeholder='Add update logs, dispatch instructions, veterinary logs link...'
-                    />
+                    <span className='text-sm font-medium'>Priority Level</span>
+                    <select
+                      value={editSeverity}
+                      onChange={(e) => setEditSeverity(e.target.value as SeverityType)}
+                      className='flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm'
+                    >
+                      <option value='Low'>Low</option>
+                      <option value='Medium'>Medium</option>
+                      <option value='High'>High</option>
+                      <option value='Critical'>Critical</option>
+                    </select>
                   </div>
                 </div>
 
-                {/* Right Column: Case Timeline */}
-                <div className='lg:col-span-3 space-y-4 h-[480px] overflow-y-auto pl-2'>
-                  <h3 className='font-semibold text-sm flex items-center gap-2 text-teal-600 dark:text-teal-400'>
-                    <Clock className='h-4 w-4' /> Rescue Case Journey
-                  </h3>
-                  <p className='text-[11px] text-muted-foreground leading-normal'>
-                    Dynamic audit logs showing the sequential stages from initial incident intake to medical resolution.
-                  </p>
-
-                  <div className='relative border-l border-muted/50 ml-3 pl-4 space-y-4 py-2 text-xs'>
-                    {sortedLogs.length === 0 ? (
-                      <div className='text-muted-foreground text-center py-8 text-xs italic'>
-                        No history entries recorded yet.
-                      </div>
-                    ) : (
-                      sortedLogs.map((log) => (
-                        <div key={log.id} className='relative group'>
-                          {/* Timeline dot */}
-                          <div className='absolute -left-[20.5px] top-1 flex h-2 w-2 items-center justify-center rounded-full bg-teal-500 ring-4 ring-background' />
-                          <div className='flex flex-col gap-0.5'>
-                            <span className='font-semibold text-foreground leading-tight'>{log.action}</span>
-                            <div className='flex items-center gap-1.5 text-[9px] text-muted-foreground'>
-                              <span>{formatLogTime(log.timestamp)}</span>
-                              <span>•</span>
-                              <span className='bg-muted px-1.5 py-0.2 rounded font-semibold text-[8px] uppercase'>{log.user}</span>
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    )}
+                <div className='grid grid-cols-2 gap-4'>
+                  <div className='space-y-1'>
+                    <span className='text-sm font-medium'>Assigned Rescuer</span>
+                    <select
+                      value={editRescuerId}
+                      onChange={(e) => setEditRescuerId(e.target.value)}
+                      className='flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm'
+                    >
+                      <option value=''>Unassigned Agent</option>
+                      {store.rescuers.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.name} ({r.role})
+                        </option>
+                      ))}
+                    </select>
                   </div>
+
+                  <div className='space-y-1'>
+                    <span className='text-sm font-medium'>Target Shelter</span>
+                    <select
+                      value={editShelterId}
+                      onChange={(e) => setEditShelterId(e.target.value)}
+                      className='flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm'
+                    >
+                      <option value=''>Unassigned Shelter</option>
+                      {store.shelters.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className='space-y-1'>
+                  <span className='text-sm font-medium'>Incident Location</span>
+                  <Input value={editLocation} onChange={(e) => setEditLocation(e.target.value)} required />
+                </div>
+
+                <div className='space-y-1'>
+                  <span className='text-sm font-medium'>Dispatch Notes</span>
+                  <Textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} />
                 </div>
               </div>
-
-              <DialogFooter className='pt-4 border-t mt-4'>
+              <DialogFooter>
                 <Button type='button' variant='outline' onClick={() => setIsEditOpen(false)}>
                   Cancel
                 </Button>
-                <Button type='submit'>Save Updates</Button>
+                <Button type='submit'>Save Case Changes</Button>
               </DialogFooter>
             </form>
           )}
@@ -629,7 +765,7 @@ export function RescueCases() {
           <DialogHeader>
             <DialogTitle>Delete Rescue Case</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this case? Doing so will not delete the associated animal but breaks linkages.
+              Are you sure you want to delete this case record?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -643,20 +779,33 @@ export function RescueCases() {
         </DialogContent>
       </Dialog>
 
-      {isMapOpen && (
-        <MockMapView
-          isOpen={isMapOpen}
-          onClose={() => setIsMapOpen(false)}
-          initialLocation={mapTarget === 'add' ? location : editLocation}
-          onConfirmLocation={(loc) => {
-            if (mapTarget === 'add') {
-              setLocation(loc)
-            } else {
-              setEditLocation(loc)
-            }
-          }}
-        />
-      )}
+      {/* Case Details Drawer */}
+      <CaseDetailsDrawer
+        rescueCase={selectedCase}
+        open={isDrawerOpen}
+        onOpenChange={setIsDrawerOpen}
+        onEditClick={handleOpenEdit}
+      />
+
+      {/* Map Picker Modal */}
+      <Dialog open={isMapOpen} onOpenChange={setIsMapOpen}>
+        <DialogContent className='sm:max-w-2xl'>
+          <DialogHeader>
+            <DialogTitle>Select Rescue Coordinates</DialogTitle>
+            <DialogDescription>Click on the location map to set incident coordinates.</DialogDescription>
+          </DialogHeader>
+          <div className='h-80 w-full rounded-md border overflow-hidden'>
+            <MockMapView
+              latitude={14.5995}
+              longitude={120.9842}
+              locationName='Selected Rescue Site'
+            />
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setIsMapOpen(false)}>Confirm Coordinates</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
