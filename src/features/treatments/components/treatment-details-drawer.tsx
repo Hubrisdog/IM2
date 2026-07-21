@@ -147,19 +147,22 @@ export function TreatmentDetailsDrawer({
               </p>
             </div>
 
-            <div className='grid grid-cols-2 gap-3 pt-1'>
-              <div className='space-y-1 bg-card p-2.5 rounded-lg border'>
-                <span className='text-[10px] font-bold uppercase text-muted-foreground block'>Procedure Executed</span>
-                <span className='font-semibold text-foreground block truncate'>{treatment.procedure}</span>
-              </div>
-
-              <div className='space-y-1 bg-card p-2.5 rounded-lg border'>
-                <span className='text-[10px] font-bold uppercase text-muted-foreground block'>Prescription & Dosage</span>
-                <span className='font-semibold text-foreground block truncate flex items-center gap-1'>
-                  <Pill className='h-3 w-3 text-amber-500' /> {treatment.medication || 'Amoxicillin 250mg'}
-                </span>
-              </div>
+            <div className='flex items-center justify-between border-b pb-2'>
+              <span className='text-muted-foreground'>Procedure Executed:</span>
+              <span className='font-semibold text-foreground'>{treatment.procedure}</span>
             </div>
+
+            <div className='flex items-center justify-between border-b pb-2'>
+              <span className='text-muted-foreground'>Medication & Dosage:</span>
+              <span className='font-semibold text-blue-600 dark:text-blue-400 font-mono'>{treatment.medication || 'None Prescribed'}</span>
+            </div>
+
+            {treatment.notes && (
+              <div className='space-y-1 bg-muted/30 p-2.5 rounded-lg border text-xs'>
+                <span className='font-semibold text-muted-foreground block text-[11px] uppercase tracking-wider'>Clinical Notes:</span>
+                <p className='text-foreground italic leading-relaxed'>{treatment.notes}</p>
+              </div>
+            )}
 
             {/* Estimated Resource Cost */}
             <div className='flex items-center justify-between border-t pt-2 text-xs'>
@@ -173,7 +176,31 @@ export function TreatmentDetailsDrawer({
           </div>
         </div>
 
-        {/* 3. Full Timestamped Patient Journey Timeline */}
+        {/* 3. Veterinary Medical Clearance & Outcome Authority Card */}
+        <div className='space-y-2 border-t pt-4'>
+          <h4 className='text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5'>
+            🩺 Veterinary Medical Clearance Authority
+          </h4>
+          <div className='p-4 rounded-xl bg-gradient-to-r from-emerald-500/10 via-card to-blue-500/10 border border-emerald-500/30 space-y-2.5 text-xs shadow-sm'>
+            <div className='flex items-center justify-between'>
+              <span className='font-bold text-foreground flex items-center gap-1.5'>
+                <CheckCircle2 className='h-4 w-4 text-emerald-500' /> Medical Clearance Decision:
+              </span>
+              <Badge className='bg-emerald-600 text-white font-bold text-xs shadow-sm'>
+                {(treatment as any).recommendation || (animal?.status === 'Recovered' ? 'Ready for Adoption' : 'Under Clinical Care')}
+              </Badge>
+            </div>
+            <p className='text-muted-foreground text-[11px] leading-relaxed'>
+              This medical clearance was issued under the direct authority of <strong className='text-foreground'>{treatment.veterinarian || 'Dr. Alice Vance (DVM)'}</strong>. Submitting this record automatically updates the official Animal Registry status.
+            </p>
+            <div className='pt-1 border-t border-emerald-500/20 flex items-center justify-between text-[11px] font-mono text-emerald-700 dark:text-emerald-300'>
+              <span>Registry Status: {animal?.status || 'Recovered'}</span>
+              <span>Clearing Vet ID: VET-2026-004</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 4. Full Timestamped Patient Journey Timeline */}
         <div className='space-y-3 border-t pt-4'>
           <h4 className='text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5'>
             🐾 Longitudinal Patient Medical Journey

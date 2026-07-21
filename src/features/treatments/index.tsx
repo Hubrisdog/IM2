@@ -76,6 +76,7 @@ export function MedicalTreatments() {
   const [treatmentDate, setTreatmentDate] = useState(new Date().toISOString().split('T')[0])
   const [followUpDate, setFollowUpDate] = useState('')
   const [notes, setNotes] = useState('')
+  const [recommendation, setRecommendation] = useState<any>('Continue Treatment')
 
   // Filter change helper
   const handleFilterChange = (setter: (val: any) => void, val: any) => {
@@ -98,6 +99,7 @@ export function MedicalTreatments() {
     setTreatmentDate(new Date().toISOString().split('T')[0])
     setFollowUpDate('')
     setNotes('')
+    setRecommendation('Continue Treatment')
     setIsAddOpen(true)
   }
 
@@ -117,10 +119,11 @@ export function MedicalTreatments() {
       treatment_date: treatmentDate,
       follow_up_date: followUpDate || null,
       notes,
+      recommendation,
     })
 
     setIsAddOpen(false)
-    toast.success('Veterinary medical record logged successfully.')
+    toast.success(`Veterinary assessment submitted. Animal registry updated based on medical clearance!`)
   }
 
   const handleOpenEdit = (t: MedicalTreatment) => {
@@ -130,9 +133,10 @@ export function MedicalTreatments() {
     setDiagnosis(t.diagnosis)
     setProcedure(t.procedure)
     setMedication(t.medication)
-    setTreatmentDate(t.treatment_date)
+    setTreatmentDate(t.treatment_date || '')
     setFollowUpDate(t.follow_up_date || '')
     setNotes(t.notes || '')
+    setRecommendation((t as any).recommendation || 'Continue Treatment')
     setIsEditOpen(true)
   }
 
@@ -149,10 +153,11 @@ export function MedicalTreatments() {
       treatment_date: treatmentDate,
       follow_up_date: followUpDate || null,
       notes,
+      recommendation,
     })
 
     setIsEditOpen(false)
-    toast.success(`Medical record TRT-2026-${selectedTreatment.id.replace(/^trt-/, '').padStart(4, '0')} updated.`)
+    toast.success(`Medical record TRT-2026-${String(selectedTreatment.id).replace(/^(trt|treat)-/, '').padStart(4, '0')} updated. Animal registry status refreshed.`)
   }
 
   const handleOpenDelete = (t: MedicalTreatment) => {
@@ -613,6 +618,26 @@ export function MedicalTreatments() {
                 </div>
               </div>
 
+              <div className='space-y-1 bg-emerald-500/10 p-3 rounded-xl border border-emerald-500/30'>
+                <span className='text-sm font-bold text-emerald-700 dark:text-emerald-300 block'>
+                  🩺 Veterinary Medical Clearance Recommendation
+                </span>
+                <span className='text-xs text-muted-foreground block pb-1'>
+                  Submitting this clearance automatically updates the Animal Registry status.
+                </span>
+                <select
+                  value={recommendation}
+                  onChange={(e) => setRecommendation(e.target.value)}
+                  className='flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm font-semibold'
+                >
+                  <option value='Continue Treatment'>🟡 Continue Treatment (Remain Under Clinical Care)</option>
+                  <option value='Ready for Adoption'>🟢 Ready for Adoption (Medically Cleared)</option>
+                  <option value='Ready for Release'>🌿 Ready for Release (Wild Wildlife Cleared)</option>
+                  <option value='Under Observation'>🩺 Under Observation</option>
+                  <option value='Critical Care'>🔴 Critical Care Required</option>
+                </select>
+              </div>
+
               <div className='space-y-1'>
                 <span className='text-sm font-medium'>Medication & Dosage</span>
                 <Input value={medication} onChange={(e) => setMedication(e.target.value)} placeholder='Amoxicillin 250mg, Meloxicam 0.5ml' />
@@ -627,7 +652,9 @@ export function MedicalTreatments() {
               <Button type='button' variant='outline' onClick={() => setIsAddOpen(false)}>
                 Cancel
               </Button>
-              <Button type='submit'>Save Medical Record</Button>
+              <Button type='submit' className='bg-emerald-600 hover:bg-emerald-700 text-white font-bold'>
+                Save Assessment & Update Registry
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -640,7 +667,7 @@ export function MedicalTreatments() {
             <form onSubmit={handleEditSubmit}>
               <DialogHeader>
                 <DialogTitle>Edit Veterinary Medical Record</DialogTitle>
-                <DialogDescription>Modify clinical diagnosis or prescriptions.</DialogDescription>
+                <DialogDescription>Modify clinical diagnosis or medical clearance assessment.</DialogDescription>
               </DialogHeader>
               <div className='grid gap-4 py-4'>
                 <div className='grid grid-cols-2 gap-4'>
@@ -687,6 +714,26 @@ export function MedicalTreatments() {
                     <span className='text-sm font-medium'>Follow-up Date</span>
                     <Input type='date' value={followUpDate} onChange={(e) => setFollowUpDate(e.target.value)} />
                   </div>
+                </div>
+
+                <div className='space-y-1 bg-emerald-500/10 p-3 rounded-xl border border-emerald-500/30'>
+                  <span className='text-sm font-bold text-emerald-700 dark:text-emerald-300 block'>
+                    🩺 Veterinary Medical Clearance Recommendation
+                  </span>
+                  <span className='text-xs text-muted-foreground block pb-1'>
+                    Submitting this clearance automatically updates the Animal Registry status.
+                  </span>
+                  <select
+                    value={recommendation}
+                    onChange={(e) => setRecommendation(e.target.value)}
+                    className='flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm font-semibold'
+                  >
+                    <option value='Continue Treatment'>🟡 Continue Treatment (Remain Under Clinical Care)</option>
+                    <option value='Ready for Adoption'>🟢 Ready for Adoption (Medically Cleared)</option>
+                    <option value='Ready for Release'>🌿 Ready for Release (Wild Wildlife Cleared)</option>
+                    <option value='Under Observation'>🩺 Under Observation</option>
+                    <option value='Critical Care'>🔴 Critical Care Required</option>
+                  </select>
                 </div>
 
                 <div className='space-y-1'>

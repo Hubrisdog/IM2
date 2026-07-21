@@ -102,16 +102,25 @@ export interface Shelter {
   created_at: string
 }
 
+export type MedicalRecommendationType =
+  | 'Ready for Adoption'
+  | 'Ready for Release'
+  | 'Continue Treatment'
+  | 'Under Observation'
+  | 'Critical Care'
+
 export interface Treatment {
   id: string
   animal_id: string
   date: string
+  treatment_date?: string
   veterinarian: string
   diagnosis: string
   medication: string
   procedure: string
   follow_up_date: string | null
   notes: string
+  recommendation?: MedicalRecommendationType
   created_at: string
 }
 
