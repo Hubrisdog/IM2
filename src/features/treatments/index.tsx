@@ -738,3 +738,6 @@ export function MedicalTreatments() {
     </div>
   )
 }
+
+export const Treatments = MedicalTreatments
+
