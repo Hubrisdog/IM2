@@ -46,6 +46,7 @@ import { AnimalStatsHeader } from './components/animal-stats-header'
 import { AnimalCardGrid } from './components/animal-card-grid'
 import { AnimalSidebarWidgets } from './components/animal-sidebar-widgets'
 import { ReadyModal } from './components/ready-modal'
+import { RescueHubHighlights } from './components/rescuehub-highlights'
 import { getDaysInShelter } from './utils/animal-helpers'
 
 type ViewMode = 'table' | 'gallery'
@@ -343,6 +344,15 @@ export function Animals() {
           )}
         </div>
       </div>
+
+      {/* RescueHub Highlights (5 Operational Highlights Showcase) */}
+      <RescueHubHighlights
+        animals={store.animals}
+        shelters={store.shelters}
+        treatments={store.treatments}
+        onSelectAnimal={handleOpenProfile}
+        onOpenReadyModal={(type) => setReadyModalType(type)}
+      />
 
       {/* 1. Dashboard Statistics Header & Featured Animal Card */}
       <AnimalStatsHeader animals={store.animals} onSelectAnimal={handleOpenProfile} />
