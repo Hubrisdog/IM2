@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useRescueHubStore, type Animal, type AnimalStatusType } from '@/stores/rescue-hub-store'
 import { useAuthStore } from '@/stores/auth-store'
 import { Button } from '@/components/ui/button'
@@ -33,11 +33,12 @@ import {
   Home,
   Trees,
   SlidersHorizontal,
-  Clock,
   Stethoscope,
   Heart,
   Sparkles,
   AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 import { AnimalPhotoUpload } from './components/animal-photo-upload'
 import { getSpeciesPlaceholder } from './utils/placeholders'
@@ -46,11 +47,10 @@ import { AnimalStatsHeader } from './components/animal-stats-header'
 import { AnimalCardGrid } from './components/animal-card-grid'
 import { AnimalSidebarWidgets } from './components/animal-sidebar-widgets'
 import { ReadyModal } from './components/ready-modal'
-import { RescueHubHighlights } from './components/rescuehub-highlights'
 import { getDaysInShelter } from './utils/animal-helpers'
 
-type ViewMode = 'table' | 'gallery'
-type SortMode = 'newest' | 'oldest' | 'longest_stay' | 'adoptable' | 'releasable'
+type ViewMode = 'gallery' | 'table'
+type SortMode = 'newest' | 'oldest' | 'name_asc' | 'name_desc' | 'longest_stay' | 'adoptable' | 'critical'
 
 export function Animals() {
   const store = useRescueHubStore()
@@ -62,6 +62,10 @@ export function Animals() {
   const [speciesFilter, setSpeciesFilter] = useState('All')
   const [viewMode, setViewMode] = useState<ViewMode>('gallery')
   const [sortMode, setSortMode] = useState<SortMode>('newest')
+
+  // Pagination States
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 12
 
   // Dialog & Modal States
   const [isAddOpen, setIsAddOpen] = useState(false)
@@ -86,6 +90,12 @@ export function Animals() {
   const [photoUrl, setPhotoUrl] = useState('')
   const [shelterId, setShelterId] = useState('')
   const [caseId, setCaseId] = useState('')
+
+  // Reset pagination when search, chip, or species filter changes
+  const handleFilterChange = (setter: (val: any) => void, val: any) => {
+    setter(val)
+    setCurrentPage(1)
+  }
 
   // Handlers
   const handleOpenProfile = (a: Animal) => {
@@ -194,90 +204,106 @@ export function Animals() {
   }
 
   // Enhanced Filtering & Searching
-  const filteredAnimals = store.animals.filter((a) => {
-    const s = search.toLowerCase()
-    const rawAnimShelterId = (a.shelter_id || '').replace(/^sh-/, '')
-    const shelter = store.shelters.find(
-      (sh) => sh.id === a.shelter_id || sh.id.replace(/^sh-/, '') === rawAnimShelterId
-    )
-    const rawAnimId = (a.id || '').replace(/^ani-/, '')
-    const treatment = store.treatments.find(
-      (t) => (t.animal_id || '').replace(/^ani-/, '') === rawAnimId || t.animal_id === a.id
-    )
+  const filteredAnimals = useMemo(() => {
+    return store.animals.filter((a) => {
+      const s = search.toLowerCase()
+      const rawAnimShelterId = (a.shelter_id || '').replace(/^sh-/, '')
+      const shelter = store.shelters.find(
+        (sh) => sh.id === a.shelter_id || sh.id.replace(/^sh-/, '') === rawAnimShelterId
+      )
+      const rawAnimId = (a.id || '').replace(/^ani-/, '')
+      const treatment = store.treatments.find(
+        (t) => (t.animal_id || '').replace(/^ani-/, '') === rawAnimId || t.animal_id === a.id
+      )
 
-    const matchesSearch =
-      a.name.toLowerCase().includes(s) ||
-      a.species.toLowerCase().includes(s) ||
-      a.breed.toLowerCase().includes(s) ||
-      a.color.toLowerCase().includes(s) ||
-      a.status.toLowerCase().includes(s) ||
-      (shelter && shelter.name.toLowerCase().includes(s)) ||
-      (treatment && (treatment.diagnosis.toLowerCase().includes(s) || treatment.veterinarian.toLowerCase().includes(s)))
+      const matchesSearch =
+        a.name.toLowerCase().includes(s) ||
+        a.species.toLowerCase().includes(s) ||
+        a.breed.toLowerCase().includes(s) ||
+        a.color.toLowerCase().includes(s) ||
+        a.status.toLowerCase().includes(s) ||
+        (shelter && shelter.name.toLowerCase().includes(s)) ||
+        (treatment && (treatment.diagnosis.toLowerCase().includes(s) || treatment.veterinarian.toLowerCase().includes(s)))
 
-    // Status Chip Filter
-    const isWild = ['Bird', 'Reptile', 'Snake', 'Monkey'].includes(a.species)
-    let matchesChip = true
+      // Status Chip Filter
+      const isWild = ['Bird', 'Reptile', 'Snake', 'Monkey'].includes(a.species)
+      let matchesChip = true
 
-    if (statusChip === 'Under Treatment') {
-      matchesChip = a.status === 'Under Treatment'
-    } else if (statusChip === 'Ready for Adoption') {
-      matchesChip = a.status === 'Recovered' && !isWild
-    } else if (statusChip === 'Ready for Release') {
-      matchesChip = a.status === 'Recovered' && isWild
-    } else if (statusChip === 'Adopted') {
-      matchesChip = a.status === 'Adopted'
-    } else if (statusChip === 'Released') {
-      matchesChip = a.status === 'Released'
-    } else if (statusChip === 'Critical Cases') {
-      const c = (a.condition || '').toLowerCase()
-      const n = (a.notes || '').toLowerCase()
-      matchesChip = c.includes('critical') || c.includes('severe') || n.includes('critical')
-    }
-
-    // Species Icon Filter
-    let matchesSpecies = true
-    if (speciesFilter !== 'All') {
-      if (speciesFilter === 'Reptiles') {
-        matchesSpecies = a.species === 'Reptile' || a.species === 'Snake'
-      } else if (speciesFilter === 'Others') {
-        matchesSpecies = !['Dog', 'Cat', 'Bird', 'Rabbit', 'Horse', 'Chicken', 'Reptile', 'Snake'].includes(a.species)
-      } else {
-        matchesSpecies = a.species.toLowerCase() === speciesFilter.toLowerCase().replace(/s$/, '')
+      if (statusChip === 'Under Treatment') {
+        matchesChip = a.status === 'Under Treatment'
+      } else if (statusChip === 'Ready for Adoption') {
+        matchesChip = a.status === 'Recovered' && !isWild
+      } else if (statusChip === 'Ready for Release') {
+        matchesChip = a.status === 'Recovered' && isWild
+      } else if (statusChip === 'Adopted') {
+        matchesChip = a.status === 'Adopted'
+      } else if (statusChip === 'Released') {
+        matchesChip = a.status === 'Released'
+      } else if (statusChip === 'Critical Cases') {
+        const c = (a.condition || '').toLowerCase()
+        const n = (a.notes || '').toLowerCase()
+        matchesChip = c.includes('critical') || c.includes('severe') || n.includes('critical')
       }
-    }
 
-    return matchesSearch && matchesChip && matchesSpecies
-  })
+      // Species Icon Filter
+      let matchesSpecies = true
+      if (speciesFilter !== 'All') {
+        if (speciesFilter === 'Reptiles') {
+          matchesSpecies = a.species === 'Reptile' || a.species === 'Snake'
+        } else if (speciesFilter === 'Others') {
+          matchesSpecies = !['Dog', 'Cat', 'Bird', 'Rabbit', 'Horse', 'Chicken', 'Reptile', 'Snake'].includes(a.species)
+        } else {
+          matchesSpecies = a.species.toLowerCase() === speciesFilter.toLowerCase().replace(/s$/, '')
+        }
+      }
+
+      return matchesSearch && matchesChip && matchesSpecies
+    })
+  }, [store.animals, store.shelters, store.treatments, search, statusChip, speciesFilter])
 
   // Sorting Logic
-  const sortedAnimals = [...filteredAnimals].sort((a, b) => {
-    if (sortMode === 'newest') {
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    } else if (sortMode === 'oldest') {
-      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-    } else if (sortMode === 'longest_stay') {
-      return getDaysInShelter(b.created_at) - getDaysInShelter(a.created_at)
-    } else if (sortMode === 'adoptable') {
-      return a.status === 'Recovered' ? -1 : 1
-    } else if (sortMode === 'releasable') {
-      return a.status === 'Released' || (a.status === 'Recovered' && ['Bird', 'Reptile', 'Snake', 'Monkey'].includes(a.species)) ? -1 : 1
-    }
-    return 0
-  })
+  const sortedAnimals = useMemo(() => {
+    return [...filteredAnimals].sort((a, b) => {
+      if (sortMode === 'newest') {
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      } else if (sortMode === 'oldest') {
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      } else if (sortMode === 'name_asc') {
+        return a.name.localeCompare(b.name)
+      } else if (sortMode === 'name_desc') {
+        return b.name.localeCompare(a.name)
+      } else if (sortMode === 'longest_stay') {
+        return getDaysInShelter(b.created_at) - getDaysInShelter(a.created_at)
+      } else if (sortMode === 'adoptable') {
+        return a.status === 'Recovered' ? -1 : 1
+      } else if (sortMode === 'critical') {
+        const aCrit = (a.condition || '').toLowerCase().includes('critical') || a.status === 'Under Treatment'
+        const bCrit = (b.condition || '').toLowerCase().includes('critical') || b.status === 'Under Treatment'
+        return aCrit ? -1 : bCrit ? 1 : 0
+      }
+      return 0
+    })
+  }, [filteredAnimals, sortMode])
+
+  // Pagination Calculation
+  const totalItems = sortedAnimals.length
+  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage))
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const paginatedAnimals = sortedAnimals.slice(startIndex, startIndex + itemsPerPage)
 
   // Helper Badge Colors for Table View
   const getStatusBadge = (st: AnimalStatusType) => {
     switch (st) {
       case 'Intake':
-        return 'bg-orange-500/15 text-orange-600 dark:text-orange-400 border-orange-500/30'
+        return 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20'
       case 'Under Treatment':
-        return 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30'
+        return 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
       case 'Recovered':
-        return 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+        return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
       case 'Adopted':
-        return 'bg-sky-500/15 text-sky-600 dark:text-sky-400 border-sky-500/30'
+        return 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
       case 'Released':
-        return 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30'
+        return 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20'
     }
   }
 
@@ -323,18 +349,18 @@ export function Animals() {
           <Button
             size='sm'
             onClick={() => setReadyModalType('adoption')}
-            className='bg-blue-600 hover:bg-blue-700 text-white gap-1.5 shadow-md text-xs font-bold'
+            className='bg-blue-600 hover:bg-blue-700 text-white gap-1.5 shadow-sm text-xs font-bold'
           >
-            <Home className='h-3.5 w-3.5' /> 🏠 Ready for Adoption
+            <Home className='h-3.5 w-3.5' /> Ready for Adoption
           </Button>
 
           {/* Quick Action: Ready for Release */}
           <Button
             size='sm'
             onClick={() => setReadyModalType('release')}
-            className='bg-teal-600 hover:bg-teal-700 text-white gap-1.5 shadow-md text-xs font-bold'
+            className='bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 shadow-sm text-xs font-bold'
           >
-            <Trees className='h-3.5 w-3.5' /> 🌿 Ready for Release
+            <Trees className='h-3.5 w-3.5' /> Ready for Release
           </Button>
 
           {(userRole === 'Admin' || userRole === 'Dispatcher') && (
@@ -345,22 +371,13 @@ export function Animals() {
         </div>
       </div>
 
-      {/* RescueHub Highlights (5 Operational Highlights Showcase) */}
-      <RescueHubHighlights
-        animals={store.animals}
-        shelters={store.shelters}
-        treatments={store.treatments}
-        onSelectAnimal={handleOpenProfile}
-        onOpenReadyModal={(type) => setReadyModalType(type)}
-      />
-
-      {/* 1. Dashboard Statistics Header & Featured Animal Card */}
+      {/* 1. Dashboard Statistics Header (Single Animal of the Week Banner + 6 Stat Cards) */}
       <AnimalStatsHeader animals={store.animals} onSelectAnimal={handleOpenProfile} />
 
       {/* 2. Quick Status Filter Chips */}
       <div className='flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar'>
         <span className='text-[11px] font-bold text-muted-foreground uppercase tracking-wider shrink-0 mr-1'>
-          Status Filter:
+          Filter:
         </span>
         {statusChips.map((chip) => {
           const Icon = chip.icon
@@ -368,11 +385,11 @@ export function Animals() {
           return (
             <button
               key={chip.label}
-              onClick={() => setStatusChip(chip.label)}
+              onClick={() => handleFilterChange(setStatusChip, chip.label)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-semibold border transition-all shrink-0 text-xs ${
                 isActive
-                  ? 'bg-teal-500 text-white border-teal-500 shadow-sm shadow-teal-500/20'
-                  : 'bg-card text-muted-foreground border-border hover:bg-muted/30 hover:text-foreground'
+                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                  : 'bg-card text-muted-foreground border-border hover:bg-muted/40 hover:text-foreground'
               }`}
             >
               <Icon className='h-3 w-3' /> {chip.label}
@@ -382,7 +399,7 @@ export function Animals() {
       </div>
 
       {/* 3. Species Quick Filter Buttons */}
-      <div className='flex items-center gap-2 overflow-x-auto py-1 bg-muted/20 p-2 rounded-xl border border-teal-500/10 no-scrollbar'>
+      <div className='flex items-center gap-2 overflow-x-auto py-1 bg-muted/20 p-2 rounded-xl border no-scrollbar'>
         <span className='text-[11px] font-bold text-muted-foreground uppercase tracking-wider shrink-0 px-2'>
           Species:
         </span>
@@ -393,11 +410,11 @@ export function Animals() {
               key={sp.name}
               variant={isActive ? 'default' : 'outline'}
               size='sm'
-              onClick={() => setSpeciesFilter(sp.name)}
+              onClick={() => handleFilterChange(setSpeciesFilter, sp.name)}
               className={`h-8 text-xs font-bold gap-1 rounded-lg shrink-0 ${
                 isActive
-                  ? 'bg-teal-600 hover:bg-teal-700 text-white shadow'
-                  : 'border-teal-500/10 hover:bg-teal-500/5'
+                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
+                  : 'border-border hover:bg-muted'
               }`}
             >
               <span>{sp.icon}</span> {sp.label}
@@ -407,14 +424,14 @@ export function Animals() {
       </div>
 
       {/* Toolbar: Search, Sort & View Mode Toggle */}
-      <div className='flex flex-wrap items-center justify-between gap-3 bg-card p-3.5 rounded-xl border shadow-sm'>
+      <div className='flex flex-wrap items-center justify-between gap-3 bg-card p-3 rounded-xl border shadow-sm'>
         {/* Search Bar */}
         <div className='flex items-center gap-2 max-w-md w-full'>
           <Search className='h-4 w-4 text-muted-foreground shrink-0' />
           <Input
             placeholder='Search by animal name, species, shelter, diagnosis, vet, or status...'
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => handleFilterChange(setSearch, e.target.value)}
             className='h-9 text-xs'
           />
         </div>
@@ -427,23 +444,25 @@ export function Animals() {
             <select
               value={sortMode}
               onChange={(e) => setSortMode(e.target.value as SortMode)}
-              className='flex h-9 rounded-md border border-input bg-background px-2 py-1 text-xs shadow-sm focus:outline-none focus:ring-1 focus:ring-ring text-foreground font-medium'
+              className='flex h-9 rounded-md border border-input bg-background px-2.5 py-1 text-xs shadow-sm focus:outline-none focus:ring-1 focus:ring-ring text-foreground font-medium'
             >
               <option value='newest'>Sort by Newest</option>
               <option value='oldest'>Sort by Oldest</option>
+              <option value='name_asc'>Name (A - Z)</option>
+              <option value='name_desc'>Name (Z - A)</option>
               <option value='longest_stay'>Longest Shelter Stay</option>
               <option value='adoptable'>Ready for Adoption First</option>
-              <option value='releasable'>Ready for Release First</option>
+              <option value='critical'>Critical Cases First</option>
             </select>
           </div>
 
-          {/* View Toggle (Table vs Gallery) */}
+          {/* View Toggle (Gallery vs Table) */}
           <div className='flex items-center bg-muted/40 p-1 rounded-lg border'>
             <Button
               variant={viewMode === 'gallery' ? 'secondary' : 'ghost'}
               size='sm'
               onClick={() => setViewMode('gallery')}
-              className='h-7 px-2 text-xs gap-1 font-semibold'
+              className='h-7 px-2.5 text-xs gap-1 font-semibold'
             >
               <LayoutGrid className='h-3.5 w-3.5' /> Gallery
             </Button>
@@ -451,7 +470,7 @@ export function Animals() {
               variant={viewMode === 'table' ? 'secondary' : 'ghost'}
               size='sm'
               onClick={() => setViewMode('table')}
-              className='h-7 px-2 text-xs gap-1 font-semibold'
+              className='h-7 px-2.5 text-xs gap-1 font-semibold'
             >
               <List className='h-3.5 w-3.5' /> Table
             </Button>
@@ -459,25 +478,27 @@ export function Animals() {
         </div>
       </div>
 
-      {/* Main Content Layout: Gallery / Table (Left 9 Cols) + Widgets Sidebar (Right 3 Cols) */}
+      {/* Main Content Layout: Gallery / Table (9 Cols) + Sticky Widgets Sidebar (3 Cols) */}
       <div className='grid grid-cols-1 lg:grid-cols-12 gap-6'>
         {/* Registry View Area (9 Cols) */}
         <div className='lg:col-span-9 space-y-4'>
           {viewMode === 'gallery' ? (
-            <AnimalCardGrid
-              animals={sortedAnimals}
-              shelters={store.shelters}
-              userRole={userRole}
-              onSelectAnimal={handleOpenProfile}
-              onEditAnimal={handleOpenEdit}
-              onDeleteAnimal={handleOpenDelete}
-            />
+            <div className='transition-all duration-300 animate-in fade-in-50'>
+              <AnimalCardGrid
+                animals={paginatedAnimals}
+                shelters={store.shelters}
+                userRole={userRole}
+                onSelectAnimal={handleOpenProfile}
+                onEditAnimal={handleOpenEdit}
+                onDeleteAnimal={handleOpenDelete}
+              />
+            </div>
           ) : (
-            <div className='rounded-xl border bg-card overflow-hidden shadow-sm'>
+            <div className='rounded-xl border bg-card overflow-hidden shadow-sm transition-all duration-300 animate-in fade-in-50'>
               <Table>
                 <TableHeader className='bg-muted/20'>
                   <TableRow>
-                    <TableHead className='w-[70px]'>Photo</TableHead>
+                    <TableHead className='w-[60px]'>Photo</TableHead>
                     <TableHead>Animal ID & Name</TableHead>
                     <TableHead>Species & Breed</TableHead>
                     <TableHead>Sex & Age</TableHead>
@@ -489,14 +510,14 @@ export function Animals() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {sortedAnimals.length === 0 ? (
+                  {paginatedAnimals.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={9} className='h-32 text-center text-muted-foreground'>
                         No animal records match your search or filter options.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    sortedAnimals.map((a) => {
+                    paginatedAnimals.map((a) => {
                       const rawAnimShelterId = (a.shelter_id || '').replace(/^sh-/, '')
                       const shelter = store.shelters.find(
                         (s) => s.id === a.shelter_id || s.id.replace(/^sh-/, '') === rawAnimShelterId
@@ -504,12 +525,12 @@ export function Animals() {
                       const days = getDaysInShelter(a.created_at)
 
                       return (
-                        <TableRow key={a.id} className='hover:bg-muted/20 transition-colors'>
+                        <TableRow key={a.id} className='hover:bg-muted/30 transition-colors'>
                           <TableCell>
                             <img
                               src={a.photo_url || getSpeciesPlaceholder(a.species)}
                               alt={a.name}
-                              className='h-10 w-10 rounded-lg object-cover border bg-slate-800'
+                              className='h-9 w-9 rounded-lg object-cover border bg-slate-800'
                             />
                           </TableCell>
                           <TableCell>
@@ -543,7 +564,7 @@ export function Animals() {
                               <Button
                                 variant='ghost'
                                 size='icon'
-                                className='h-8 w-8 text-teal-600 dark:text-teal-400 hover:bg-teal-500/10'
+                                className='h-8 w-8 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10'
                                 onClick={() => handleOpenProfile(a)}
                                 title='View Profile'
                               >
@@ -581,10 +602,45 @@ export function Animals() {
               </Table>
             </div>
           )}
+
+          {/* Pagination Controls Bar */}
+          {totalItems > 0 && (
+            <div className='flex flex-col sm:flex-row items-center justify-between gap-3 bg-card p-3 rounded-xl border shadow-sm text-xs'>
+              <span className='text-muted-foreground font-medium'>
+                Showing <strong className='text-foreground font-mono'>{startIndex + 1}–{Math.min(startIndex + itemsPerPage, totalItems)}</strong> of <strong className='text-foreground font-mono'>{totalItems}</strong> animals
+              </span>
+
+              <div className='flex items-center gap-1.5'>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className='h-8 text-xs gap-1 font-semibold'
+                >
+                  <ChevronLeft className='h-3.5 w-3.5' /> Previous
+                </Button>
+
+                <div className='flex items-center gap-1 px-2 font-mono text-xs font-bold text-muted-foreground'>
+                  Page <span className='text-foreground font-extrabold'>{currentPage}</span> of {totalPages}
+                </div>
+
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className='h-8 text-xs gap-1 font-semibold'
+                >
+                  Next <ChevronRight className='h-3.5 w-3.5' />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Widgets Sidebar (3 Cols) */}
-        <div className='lg:col-span-3 space-y-4'>
+        {/* Sticky Widgets Sidebar (3 Cols) */}
+        <div className='lg:col-span-3'>
           <AnimalSidebarWidgets
             animals={store.animals}
             shelters={store.shelters}

@@ -1,16 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import {
   Clock,
   AlertTriangle,
   Heart,
-  Sparkles,
   Stethoscope,
   Building2,
+  Sparkles,
   ArrowRight,
-  Eye,
-  CheckCircle2,
 } from 'lucide-react'
 import { type Animal, type Shelter, type Treatment } from '@/stores/rescue-hub-store'
 import { getSpeciesPlaceholder } from '../utils/placeholders'
@@ -34,7 +31,7 @@ export function AnimalSidebarWidgets({
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 5)
 
-  // Critical cases (Condition contains critical/severe or Under Treatment with severe notes)
+  // Critical cases
   const criticalCases = animals.filter((a) => {
     const c = (a.condition || '').toLowerCase()
     const n = (a.notes || '').toLowerCase()
@@ -47,22 +44,22 @@ export function AnimalSidebarWidgets({
     )
   }).slice(0, 4)
 
-  // Success Stories (Adopted or Released animals)
+  // Success Stories
   const successStories = animals.filter(
     (a) => a.status === 'Adopted' || a.status === 'Released'
   ).slice(0, 3)
 
   return (
-    <div className='space-y-4'>
-      {/* Widget 1: Critical Cases Widget */}
+    <div className='sticky top-6 space-y-4'>
+      {/* Widget 1: Critical Cases Monitor */}
       {criticalCases.length > 0 && (
-        <Card className='border-rose-500/30 bg-rose-500/5 shadow-md overflow-hidden'>
-          <CardHeader className='pb-2 pt-3.5 px-4 bg-rose-500/10 border-b border-rose-500/20'>
+        <Card className='border border-rose-500/20 bg-card shadow-sm overflow-hidden'>
+          <CardHeader className='pb-2 pt-3 px-3.5 bg-rose-500/5 border-b border-rose-500/10'>
             <CardTitle className='text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400 flex items-center gap-1.5'>
-              <AlertTriangle className='h-4 w-4 animate-pulse text-rose-500' /> Critical Care Monitor ({criticalCases.length})
+              <AlertTriangle className='h-3.5 w-3.5 text-rose-500' /> Critical Care Monitor ({criticalCases.length})
             </CardTitle>
           </CardHeader>
-          <CardContent className='p-3 space-y-2.5'>
+          <CardContent className='p-3 space-y-2'>
             {criticalCases.map((animal) => {
               const rawAnimShelterId = (animal.shelter_id || '').replace(/^sh-/, '')
               const shelter = shelters.find(
@@ -77,14 +74,14 @@ export function AnimalSidebarWidgets({
                 <div
                   key={animal.id}
                   onClick={() => onSelectAnimal(animal)}
-                  className='p-2.5 rounded-lg bg-background border border-rose-500/20 hover:border-rose-500/40 cursor-pointer transition-all flex items-start gap-3 group'
+                  className='p-2.5 rounded-lg bg-muted/20 border border-rose-500/15 hover:border-rose-500/30 cursor-pointer transition-all flex items-start gap-2.5 group'
                 >
                   <img
                     src={animal.photo_url || getSpeciesPlaceholder(animal.species)}
                     alt={animal.name}
-                    className='h-12 w-12 rounded-lg object-cover border border-rose-500/30 shrink-0 bg-slate-800'
+                    className='h-10 w-10 rounded-lg object-cover border border-rose-500/20 shrink-0 bg-slate-800'
                   />
-                  <div className='space-y-1 overflow-hidden flex-1'>
+                  <div className='space-y-0.5 overflow-hidden flex-1'>
                     <div className='flex items-center justify-between'>
                       <h4 className='font-bold text-xs text-foreground group-hover:text-rose-500 transition-colors truncate'>
                         {animal.name}
@@ -119,24 +116,24 @@ export function AnimalSidebarWidgets({
       )}
 
       {/* Widget 2: Recent Arrivals */}
-      <Card className='border-teal-500/20 bg-card shadow-sm'>
-        <CardHeader className='pb-2 pt-3.5 px-4 border-b'>
-          <CardTitle className='text-xs font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400 flex items-center gap-1.5'>
-            <Clock className='h-4 w-4 text-teal-500' /> Recent Arrivals (Last 5)
+      <Card className='border bg-card shadow-sm'>
+        <CardHeader className='pb-2 pt-3 px-3.5 border-b'>
+          <CardTitle className='text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5'>
+            <Clock className='h-3.5 w-3.5 text-emerald-500' /> Recent Arrivals
           </CardTitle>
         </CardHeader>
-        <CardContent className='p-3 space-y-2'>
+        <CardContent className='p-2.5 space-y-1.5'>
           {recentArrivals.map((animal) => (
             <div
               key={animal.id}
               onClick={() => onSelectAnimal(animal)}
-              className='p-2 rounded-lg hover:bg-muted/30 cursor-pointer transition-all flex items-center justify-between gap-2 border border-transparent hover:border-teal-500/20'
+              className='p-1.5 rounded-lg hover:bg-muted/40 cursor-pointer transition-all flex items-center justify-between gap-2 border border-transparent hover:border-border'
             >
-              <div className='flex items-center gap-2.5 overflow-hidden'>
+              <div className='flex items-center gap-2 overflow-hidden'>
                 <img
                   src={animal.photo_url || getSpeciesPlaceholder(animal.species)}
                   alt={animal.name}
-                  className='h-9 w-9 rounded-full object-cover border shrink-0 bg-slate-800'
+                  className='h-8 w-8 rounded-full object-cover border shrink-0 bg-slate-800'
                 />
                 <div className='overflow-hidden space-y-0.5'>
                   <h4 className='font-semibold text-xs text-foreground truncate'>
@@ -155,38 +152,37 @@ export function AnimalSidebarWidgets({
         </CardContent>
       </Card>
 
-      {/* Widget 3: Success Stories Carousel / Showcase */}
+      {/* Widget 3: Success Stories */}
       {successStories.length > 0 && (
-        <Card className='border-emerald-500/20 bg-gradient-to-br from-emerald-500/5 via-card to-card shadow-sm'>
-          <CardHeader className='pb-2 pt-3.5 px-4 border-b border-emerald-500/10'>
+        <Card className='border bg-card shadow-sm'>
+          <CardHeader className='pb-2 pt-3 px-3.5 border-b'>
             <CardTitle className='text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5'>
-              <Heart className='h-4 w-4 fill-emerald-500 text-emerald-500' /> Success Stories ({successStories.length})
+              <Heart className='h-3.5 w-3.5 fill-emerald-500 text-emerald-500' /> Success Stories
             </CardTitle>
           </CardHeader>
-          <CardContent className='p-3 space-y-3'>
+          <CardContent className='p-2.5 space-y-2'>
             {successStories.map((animal) => {
               const days = getDaysInShelter(animal.created_at)
               return (
-                <div key={animal.id} className='bg-background p-2.5 rounded-lg border border-emerald-500/20 space-y-2'>
+                <div key={animal.id} className='bg-muted/20 p-2.5 rounded-lg border space-y-1.5'>
                   <div className='flex items-center justify-between gap-2'>
                     <div className='flex items-center gap-2'>
                       <img
                         src={animal.photo_url || getSpeciesPlaceholder(animal.species)}
                         alt={animal.name}
-                        className='h-8 w-8 rounded-full object-cover border border-emerald-500/40'
+                        className='h-7 w-7 rounded-full object-cover border border-emerald-500/40'
                       />
                       <div>
                         <h5 className='font-bold text-xs text-foreground'>{animal.name}</h5>
                         <p className='text-[10px] text-muted-foreground'>{animal.species} • {animal.breed}</p>
                       </div>
                     </div>
-                    <Badge className='bg-emerald-500/15 text-emerald-600 border-emerald-500/30 text-[10px] font-bold'>
+                    <Badge className='bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px] font-bold'>
                       {animal.status === 'Adopted' ? '❤️ Adopted' : '🕊 Released'}
                     </Badge>
                   </div>
 
-                  {/* Outcome Lifecycle Progression */}
-                  <div className='flex items-center justify-between text-[9px] font-semibold text-muted-foreground bg-muted/30 p-1.5 rounded border'>
+                  <div className='flex items-center justify-between text-[9px] font-semibold text-muted-foreground bg-background p-1 rounded border'>
                     <span>Rescued</span>
                     <ArrowRight className='h-2.5 w-2.5 text-emerald-500' />
                     <span>Recovered</span>
