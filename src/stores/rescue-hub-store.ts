@@ -168,18 +168,31 @@ interface RescueHubState {
   deleteTreatment: (id: string) => void
 }
 
-// Validation rules
+// Validation rules - Full operational status flexibility for dispatchers & administrators
+const ALL_STATUSES: RescueCaseStatusType[] = [
+  'REPORTED',
+  'ASSIGNED',
+  'EN_ROUTE',
+  'RESCUED',
+  'SHELTER_INTAKE',
+  'UNDER_TREATMENT',
+  'RECOVERED',
+  'ADOPTED',
+  'RELEASED',
+  'CLOSED',
+]
+
 export const VALID_CASE_TRANSITIONS: Record<RescueCaseStatusType, RescueCaseStatusType[]> = {
-  REPORTED: ['ASSIGNED', 'CLOSED'],
-  ASSIGNED: ['REPORTED', 'EN_ROUTE', 'CLOSED'],
-  EN_ROUTE: ['ASSIGNED', 'RESCUED', 'CLOSED'],
-  RESCUED: ['SHELTER_INTAKE', 'CLOSED'],
-  SHELTER_INTAKE: ['UNDER_TREATMENT', 'RECOVERED', 'CLOSED'],
-  UNDER_TREATMENT: ['RECOVERED', 'CLOSED'],
-  RECOVERED: ['ADOPTED', 'RELEASED', 'CLOSED'],
-  ADOPTED: ['CLOSED'],
-  RELEASED: ['CLOSED'],
-  CLOSED: []
+  REPORTED: ALL_STATUSES,
+  ASSIGNED: ALL_STATUSES,
+  EN_ROUTE: ALL_STATUSES,
+  RESCUED: ALL_STATUSES,
+  SHELTER_INTAKE: ALL_STATUSES,
+  UNDER_TREATMENT: ALL_STATUSES,
+  RECOVERED: ALL_STATUSES,
+  ADOPTED: ALL_STATUSES,
+  RELEASED: ALL_STATUSES,
+  CLOSED: ALL_STATUSES,
 }
 
 const getHeaders = () => {
