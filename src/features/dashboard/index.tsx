@@ -33,6 +33,7 @@ export function Dashboard() {
   const cases = useRescueHubStore((state) => state.cases)
   const animals = useRescueHubStore((state) => state.animals)
   const shelters = useRescueHubStore((state) => state.shelters)
+  const rescuers = useRescueHubStore((state) => state.rescuers)
 
   // Calculations
   const totalCases = cases.length
@@ -161,6 +162,24 @@ export function Dashboard() {
                   </div>
                   <p className='text-xs text-muted-foreground mt-1'>
                     Active veterinary cases in clinic
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Personnel Operational Status */}
+              <Card>
+                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                  <CardTitle className='text-sm font-medium'>
+                    Personnel & Deployment
+                  </CardTitle>
+                  <Activity className='h-4 w-4 text-emerald-500' />
+                </CardHeader>
+                <CardContent>
+                  <div className='text-2xl font-bold text-emerald-600 dark:text-emerald-400'>
+                    {rescuers.filter((r) => r.status === 'Available').length} Available
+                  </div>
+                  <p className='text-xs text-muted-foreground mt-1'>
+                    {rescuers.filter((r) => r.status === 'On Rescue' || r.status === 'Responding').length} on active rescue • {rescuers.filter((r) => r.role === 'Veterinarian').length} medical staff
                   </p>
                 </CardContent>
               </Card>

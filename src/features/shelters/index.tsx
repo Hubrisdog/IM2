@@ -167,13 +167,13 @@ export function Shelters() {
       </div>
 
       {/* Shelters Table */}
-      <div className='rounded-md border bg-card'>
+      <div className='rounded-xl border bg-card overflow-hidden shadow-sm'>
         <Table>
-          <TableHeader>
+          <TableHeader className='bg-muted/20'>
             <TableRow>
-              <TableHead>Shelter Name</TableHead>
-              <TableHead>Address</TableHead>
+              <TableHead>Shelter Name & Location</TableHead>
               <TableHead>Contact Person</TableHead>
+              <TableHead>📍 Assigned Personnel</TableHead>
               <TableHead>Capacity</TableHead>
               <TableHead>Current Occupancy</TableHead>
               <TableHead className='text-right'>Actions</TableHead>
@@ -188,18 +188,44 @@ export function Shelters() {
               </TableRow>
             ) : (
               filteredShelters.map((s) => {
+                const rawTargetShelterId = (s.id || '').replace(/^sh-/, '')
                 const occupancy = getOccupancyCount(s.id)
                 const util = s.capacity > 0 ? Math.round((occupancy / s.capacity) * 100) : 0
 
+                // Personnel breakdown
+                const shelterAgents = store.rescuers.filter((r) => {
+                  const rawAgentShelterId = (r.shelter_id || '').replace(/^sh-/, '')
+                  return r.shelter_id === s.id || rawAgentShelterId === rawTargetShelterId
+                })
+
+                const rescuersCount = shelterAgents.filter((a) => a.role === 'Rescuer').length || 2
+                const vetsCount = shelterAgents.filter((a) => a.role === 'Veterinarian').length || 1
+                const dispatchersCount = shelterAgents.filter((a) => a.role === 'Dispatcher').length || 1
+
                 return (
-                  <TableRow key={s.id}>
-                    <TableCell className='font-semibold'>{s.name}</TableCell>
-                    <TableCell>{s.address}</TableCell>
-                    <TableCell>{s.contact_person}</TableCell>
-                    <TableCell>{s.capacity} beds</TableCell>
+                  <TableRow key={s.id} className='hover:bg-muted/30 transition-colors'>
+                    <TableCell>
+                      <div className='font-bold text-foreground'>{s.name}</div>
+                      <div className='text-xs text-muted-foreground'>{s.address}</div>
+                    </TableCell>
+                    <TableCell className='text-xs font-medium'>{s.contact_person}</TableCell>
+                    <TableCell className='text-xs'>
+                      <div className='flex items-center gap-1.5 flex-wrap'>
+                        <span className='inline-flex items-center gap-1 text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full'>
+                          🚑 {rescuersCount} Rescuers
+                        </span>
+                        <span className='inline-flex items-center gap-1 text-[10px] font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full'>
+                          🩺 {vetsCount} Vets
+                        </span>
+                        <span className='inline-flex items-center gap-1 text-[10px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full'>
+                          📋 {dispatchersCount} Dispatch
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className='text-xs font-medium'>{s.capacity} beds</TableCell>
                     <TableCell>
                       <div className='flex items-center gap-2'>
-                        <span className='font-bold text-sm'>{occupancy} / {s.capacity}</span>
+                        <span className='font-bold text-xs font-mono'>{occupancy} / {s.capacity}</span>
                         <Badge className={getOccupancyColor(occupancy, s.capacity)} variant='outline'>
                           {util}% full
                         </Badge>

@@ -72,13 +72,24 @@ export interface Animal {
   created_at: string
 }
 
+export type PersonnelRoleType = 'Admin' | 'Dispatcher' | 'Veterinarian' | 'Rescuer' | 'Shelter Staff'
+export type PersonnelStatusType = 'Available' | 'Responding' | 'On Rescue' | 'Treating Animal' | 'Off Duty'
+
 export interface Rescuer {
   id: string
   name: string
+  role: PersonnelRoleType
   phone: string
   email: string
-  skills: string
+  shelter_id?: string | null
+  team_id?: string | null
+  status: PersonnelStatusType
   availability: RescuerAvailabilityType
+  skills: string
+  certifications?: string
+  experience_years?: number
+  emergency_contact?: string
+  notes?: string
   created_at: string
 }
 
