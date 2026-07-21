@@ -115,9 +115,15 @@ export function Shelters() {
 
   // Computes occupancy based on how many animals currently reside in this shelter and are active
   const getOccupancyCount = (shelterId: string) => {
-    return store.animals.filter(
-      (a) => a.shelter_id === shelterId && a.status !== 'Adopted' && a.status !== 'Released'
-    ).length
+    const rawTargetShelterId = (shelterId || '').replace(/^sh-/, '')
+    return store.animals.filter((a) => {
+      const rawAnimShelterId = (a.shelter_id || '').replace(/^sh-/, '')
+      return (
+        (a.shelter_id === shelterId || rawAnimShelterId === rawTargetShelterId) &&
+        a.status !== 'Adopted' &&
+        a.status !== 'Released'
+      )
+    }).length
   }
 
   const getOccupancyColor = (current: number, max: number) => {

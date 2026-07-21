@@ -42,9 +42,15 @@ export function Reports() {
   const animalsBySpecies = Object.entries(speciesMap).map(([species, count]) => ({ species, count }))
 
   const animalsByShelter = store.shelters.map((s) => {
-    const activeOccupancy = store.animals.filter(
-      (a) => a.shelter_id === s.id && a.status !== 'Adopted' && a.status !== 'Released'
-    ).length
+    const rawTargetShelterId = (s.id || '').replace(/^sh-/, '')
+    const activeOccupancy = store.animals.filter((a) => {
+      const rawAnimShelterId = (a.shelter_id || '').replace(/^sh-/, '')
+      return (
+        (a.shelter_id === s.id || rawAnimShelterId === rawTargetShelterId) &&
+        a.status !== 'Adopted' &&
+        a.status !== 'Released'
+      )
+    }).length
     const pct = s.capacity > 0 ? Math.round((activeOccupancy / s.capacity) * 100) : 0
     return { name: s.name, capacity: s.capacity, occupancy: activeOccupancy, occupancyRate: pct }
   })
@@ -91,9 +97,15 @@ export function Reports() {
 
   // Chart Data 1: Shelter Occupancy vs Capacity
   const shelterChartData = store.shelters.map((s) => {
-    const activeOccupancy = store.animals.filter(
-      (a) => a.shelter_id === s.id && a.status !== 'Adopted' && a.status !== 'Released'
-    ).length
+    const rawTargetShelterId = (s.id || '').replace(/^sh-/, '')
+    const activeOccupancy = store.animals.filter((a) => {
+      const rawAnimShelterId = (a.shelter_id || '').replace(/^sh-/, '')
+      return (
+        (a.shelter_id === s.id || rawAnimShelterId === rawTargetShelterId) &&
+        a.status !== 'Adopted' &&
+        a.status !== 'Released'
+      )
+    }).length
     return {
       name: s.name,
       Capacity: s.capacity,

@@ -96,9 +96,9 @@ export function UserAuthForm({
     })
   }
 
-  const handleDemoLogin = () => {
-    form.setValue('email', 'admin@rescuehub.org')
-    form.setValue('password', 'admin123')
+  const handleRoleDemoLogin = (email: string, pass: string, roleName: string) => {
+    form.setValue('email', email)
+    form.setValue('password', pass)
 
     setIsLoading(true)
 
@@ -107,10 +107,7 @@ export function UserAuthForm({
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        email: 'admin@rescuehub.org',
-        password: 'admin123'
-      })
+      body: JSON.stringify({ email, password: pass })
     }).then(async (res) => {
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}))
@@ -120,17 +117,14 @@ export function UserAuthForm({
     })
 
     toast.promise(demoPromise, {
-      loading: 'Autofilling & Logging in...',
+      loading: `Logging in as ${roleName}...`,
       success: (payload) => {
         setIsLoading(false)
         auth.setUser(payload.user)
         auth.setAccessToken(payload.accessToken)
-
-        // Trigger initial data load in the background
         useRescueHubStore.getState().fetchInitialData()
-
         navigate({ to: redirectTo || '/', replace: true })
-        return 'Welcome to RescueHub Demo!'
+        return `Signed in as ${roleName}!`
       },
       error: (err: any) => {
         setIsLoading(false)
@@ -138,6 +132,8 @@ export function UserAuthForm({
       }
     })
   }
+
+  const handleDemoLogin = () => handleRoleDemoLogin('admin@rescuehub.org', 'admin123', 'Admin')
 
   const handleGoogleSignIn = () => {
     setIsLoading(true)
@@ -204,15 +200,51 @@ export function UserAuthForm({
           Sign in
         </Button>
 
-        <Button
-          variant='secondary'
-          type='button'
-          disabled={isLoading}
-          className='w-full bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 flex gap-2 items-center justify-center font-semibold'
-          onClick={handleDemoLogin}
-        >
-          🔑 Quick Demo Login (Auto-fill)
-        </Button>
+        <div className='mt-2 space-y-1.5'>
+          <p className='text-xs font-semibold text-muted-foreground text-center'>Quick Demo Logins (Select Role):</p>
+          <div className='grid grid-cols-2 gap-1.5'>
+            <Button
+              variant='outline'
+              type='button'
+              size='sm'
+              disabled={isLoading}
+              className='text-xs bg-purple-500/5 text-purple-600 dark:text-purple-400 border-purple-500/20 hover:bg-purple-500/10'
+              onClick={() => handleRoleDemoLogin('admin@rescuehub.org', 'admin123', 'Admin')}
+            >
+              👑 Admin
+            </Button>
+            <Button
+              variant='outline'
+              type='button'
+              size='sm'
+              disabled={isLoading}
+              className='text-xs bg-blue-500/5 text-blue-600 dark:text-blue-400 border-blue-500/20 hover:bg-blue-500/10'
+              onClick={() => handleRoleDemoLogin('alice.green@rescuehub.org', 'agent123', 'Dispatcher')}
+            >
+              📋 Dispatcher
+            </Button>
+            <Button
+              variant='outline'
+              type='button'
+              size='sm'
+              disabled={isLoading}
+              className='text-xs bg-emerald-500/5 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/10'
+              onClick={() => handleRoleDemoLogin('alice.vance@rescuehub.org', 'agent123', 'Veterinarian')}
+            >
+              🩺 Vet
+            </Button>
+            <Button
+              variant='outline'
+              type='button'
+              size='sm'
+              disabled={isLoading}
+              className='text-xs bg-amber-500/5 text-amber-600 dark:text-amber-400 border-amber-500/20 hover:bg-amber-500/10'
+              onClick={() => handleRoleDemoLogin('mark.davis@rescuehub.org', 'agent123', 'Rescuer')}
+            >
+              🚑 Rescuer
+            </Button>
+          </div>
+        </div>
 
         <div className='relative my-2'>
           <div className='absolute inset-0 flex items-center'>

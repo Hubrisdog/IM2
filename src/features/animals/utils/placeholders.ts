@@ -4,6 +4,9 @@ export const getSpeciesPlaceholder = (species: string): string => {
   if (s.includes('cat')) return '/images/animals/cat-placeholder.jpg';
   if (s.includes('bird')) return '/images/animals/bird-placeholder.jpg';
   if (s.includes('rabbit')) return '/images/animals/rabbit-placeholder.jpg';
+  if (s.includes('snake') || s.includes('reptile')) return '/images/animals/snake-placeholder.jpg';
+  if (s.includes('monkey') || s.includes('primate')) return '/images/animals/monkey-placeholder.jpg';
+  if (s.includes('chicken') || s.includes('poultry')) return '/images/animals/chicken-placeholder.jpg';
   if (s.includes('goat')) return '/images/animals/goat-placeholder.jpg';
   if (s.includes('pig')) return '/images/animals/pig-placeholder.jpg';
   if (s.includes('horse')) return '/images/animals/horse-placeholder.jpg';

@@ -47,8 +47,9 @@ export const getAnimals = async (req: Request, res: Response) => {
       sex: a.sex,
       estimated_age: a.age_estimate,
       weight: a.weight,
-      color: 'Unknown', // mapped to default mock structure color
+      color: a.color || 'Unknown',
       condition: a.condition,
+      notes: a.notes || '',
       status: a.status as any,
       photo_url: a.photo_url,
       shelter_id: a.shelter_id ? `sh-${a.shelter_id}` : null, // keep the frontend-expected prefix format!
@@ -63,7 +64,7 @@ export const getAnimals = async (req: Request, res: Response) => {
 }
 
 export const createAnimal = async (req: Request, res: Response) => {
-  const { name, species, breed, sex, estimated_age, weight, condition, status, photo_url, shelter_id, case_id } = req.body
+  const { name, species, breed, color, notes, sex, estimated_age, weight, condition, status, photo_url, shelter_id, case_id } = req.body
 
   try {
     let speciesRecord = await prisma.species.findUnique({
@@ -81,6 +82,8 @@ export const createAnimal = async (req: Request, res: Response) => {
         name: name || 'Unnamed Animal',
         species_id: speciesRecord.id,
         breed: breed || 'Unknown Mix',
+        color: color || 'Unknown',
+        notes: notes || '',
         sex: sex || 'Unknown',
         age_estimate: estimated_age || 'Unknown',
         weight: parseFloat(weight) || 0,
@@ -107,6 +110,8 @@ export const createAnimal = async (req: Request, res: Response) => {
       name: animal.name,
       species,
       breed: animal.breed,
+      color: animal.color,
+      notes: animal.notes,
       sex: animal.sex,
       estimated_age: animal.age_estimate,
       weight: animal.weight,
@@ -158,6 +163,8 @@ export const updateAnimal = async (req: Request, res: Response) => {
         name: data.name,
         species_id: speciesId,
         breed: data.breed,
+        color: data.color,
+        notes: data.notes,
         sex: data.sex,
         age_estimate: data.estimated_age,
         weight: data.weight ? parseFloat(data.weight) : undefined,

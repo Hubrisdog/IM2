@@ -171,6 +171,9 @@ export function AnimalPhotoUpload({ value, onChange, species }: AnimalPhotoUploa
           <option value='/images/animals/cat-placeholder.jpg'>Cat Preset</option>
           <option value='/images/animals/bird-placeholder.jpg'>Bird Preset</option>
           <option value='/images/animals/rabbit-placeholder.jpg'>Rabbit Preset</option>
+          <option value='/images/animals/snake-placeholder.jpg'>Snake / Reptile Preset</option>
+          <option value='/images/animals/monkey-placeholder.jpg'>Monkey Preset</option>
+          <option value='/images/animals/chicken-placeholder.jpg'>Chicken / Poultry Preset</option>
           <option value='/images/animals/goat-placeholder.jpg'>Goat Preset</option>
           <option value='/images/animals/pig-placeholder.jpg'>Pig Preset</option>
           <option value='/images/animals/horse-placeholder.jpg'>Horse Preset</option>

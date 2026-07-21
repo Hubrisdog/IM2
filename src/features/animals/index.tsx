@@ -22,9 +22,10 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
-import { Plus, Search, Edit2, Trash2, PawPrint } from 'lucide-react'
+import { Plus, Search, Edit2, Trash2, PawPrint, Eye } from 'lucide-react'
 import { AnimalPhotoUpload } from './components/animal-photo-upload'
 import { getSpeciesPlaceholder } from './utils/placeholders'
+import { AnimalProfileDialog } from './components/animal-profile-dialog'
 
 export function Animals() {
   const store = useRescueHubStore()
@@ -36,6 +37,7 @@ export function Animals() {
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+  const [isProfileOpen, setIsProfileOpen] = useState(false)
 
   const [selectedAnimal, setSelectedAnimal] = useState<Animal | null>(null)
 
@@ -48,12 +50,18 @@ export function Animals() {
   const [weight, setWeight] = useState(0)
   const [color, setColor] = useState('')
   const [condition, setCondition] = useState('')
+  const [notes, setNotes] = useState('')
   const [status, setStatus] = useState<AnimalStatusType>('Intake')
   const [photoUrl, setPhotoUrl] = useState('')
   const [shelterId, setShelterId] = useState('')
   const [caseId, setCaseId] = useState('')
 
   // Handlers
+  const handleOpenProfile = (a: Animal) => {
+    setSelectedAnimal(a)
+    setIsProfileOpen(true)
+  }
+
   const handleOpenAdd = () => {
     setName('')
     setSpecies('Dog')
@@ -63,6 +71,7 @@ export function Animals() {
     setWeight(0)
     setColor('')
     setCondition('Healthy')
+    setNotes('')
     setStatus('Intake')
     setPhotoUrl('')
     setShelterId('')
@@ -77,8 +86,7 @@ export function Animals() {
       return
     }
 
-    // Default image if empty
-    const finalPhoto = photoUrl.trim() || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=400&h=400&fit=crop'
+    const finalPhoto = photoUrl.trim() || getSpeciesPlaceholder(species)
 
     store.addAnimal({
       name,
@@ -89,6 +97,7 @@ export function Animals() {
       weight: Number(weight) || 0,
       color: color || 'Unknown',
       condition,
+      notes,
       status,
       photo_url: finalPhoto,
       shelter_id: shelterId || null,
@@ -109,6 +118,7 @@ export function Animals() {
     setWeight(a.weight)
     setColor(a.color)
     setCondition(a.condition)
+    setNotes(a.notes || '')
     setStatus(a.status)
     setPhotoUrl(a.photo_url || '')
     setShelterId(a.shelter_id || '')
@@ -129,6 +139,7 @@ export function Animals() {
       weight: Number(weight),
       color,
       condition,
+      notes,
       status,
       photo_url: photoUrl || null,
       shelter_id: shelterId || null,
@@ -250,8 +261,11 @@ export function Animals() {
               </TableRow>
             ) : (
               filteredAnimals.map((a) => {
-                const shelter = store.shelters.find((s) => s.id === a.shelter_id)
-                const rescueCase = store.cases.find((c) => c.id === a.case_id)
+                const rawAnimShelterId = (a.shelter_id || '').replace(/^sh-/, '')
+                const shelter = store.shelters.find((s) => s.id === a.shelter_id || s.id.replace(/^sh-/, '') === rawAnimShelterId)
+
+                const rawAnimCaseId = (a.case_id || '').replace(/^case-/, '')
+                const rescueCase = store.cases.find((c) => c.id === a.case_id || c.id.replace(/^case-/, '') === rawAnimCaseId)
 
                 return (
                   <TableRow key={a.id}>
@@ -289,12 +303,22 @@ export function Animals() {
                     </TableCell>
                     <TableCell className='text-right'>
                       <div className='flex items-center justify-end gap-1'>
+                        <Button
+                          variant='ghost'
+                          size='icon'
+                          className='h-8 w-8 text-teal-600 dark:text-teal-400 hover:bg-teal-500/10'
+                          onClick={() => handleOpenProfile(a)}
+                          title='View Animal Profile'
+                        >
+                          <Eye className='h-3.5 w-3.5' />
+                        </Button>
                         {(userRole === 'Admin' || userRole === 'Dispatcher' || userRole === 'Veterinarian') && (
                           <Button
                             variant='ghost'
                             size='icon'
                             className='h-8 w-8 text-muted-foreground'
                             onClick={() => handleOpenEdit(a)}
+                            title='Edit Record'
                           >
                             <Edit2 className='h-3.5 w-3.5' />
                           </Button>
@@ -305,6 +329,7 @@ export function Animals() {
                             size='icon'
                             className='h-8 w-8 text-rose-500 hover:bg-rose-500/10 hover:text-rose-500'
                             onClick={() => handleOpenDelete(a)}
+                            title='Delete Record'
                           >
                             <Trash2 className='h-3.5 w-3.5' />
                           </Button>
@@ -441,8 +466,13 @@ export function Animals() {
               </div>
 
               <div className='space-y-1'>
-                <span className='text-sm font-medium'>Condition & Medical Notes</span>
+                <span className='text-sm font-medium'>Condition & Medical Overview</span>
                 <Textarea value={condition} onChange={(e) => setCondition(e.target.value)} placeholder='Note fractures, infections, starvation or general health...' />
+              </div>
+
+              <div className='space-y-1'>
+                <span className='text-sm font-medium'>Rescue Observations & Behavioral Notes</span>
+                <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder='Behavioral observation notes, temperament, intake details...' />
               </div>
             </div>
             <DialogFooter className='pt-2'>
@@ -578,8 +608,13 @@ export function Animals() {
                 </div>
 
                 <div className='space-y-1'>
-                  <span className='text-sm font-medium'>Condition & Medical Notes</span>
+                  <span className='text-sm font-medium'>Condition & Medical Overview</span>
                   <Textarea value={condition} onChange={(e) => setCondition(e.target.value)} />
+                </div>
+
+                <div className='space-y-1'>
+                  <span className='text-sm font-medium'>Rescue Observations & Behavioral Notes</span>
+                  <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder='Behavioral observation notes, temperament, intake details...' />
                 </div>
               </div>
               <DialogFooter className='pt-2'>
@@ -599,7 +634,7 @@ export function Animals() {
           <DialogHeader>
             <DialogTitle>Delete Animal Record</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this animal record? This will clean up the entries but leaves related treatments intact (they will refer to an empty animal link).
+              Are you sure you want to delete this animal record? This will clean up the entries but leaves related treatments intact.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -612,6 +647,17 @@ export function Animals() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Animal Profile Dialog */}
+      <AnimalProfileDialog
+        animal={selectedAnimal}
+        open={isProfileOpen}
+        onOpenChange={setIsProfileOpen}
+        onEditClick={() => {
+          setIsProfileOpen(false)
+          if (selectedAnimal) handleOpenEdit(selectedAnimal)
+        }}
+      />
     </div>
   )
 }

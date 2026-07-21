@@ -42,13 +42,18 @@ export function RescueCases() {
 
   // Timeline calculations
   const caseLogs = selectedCase
-    ? store.activityLogs.filter(
-        (log) =>
-          (log.entity_type === 'RescueCase' && log.entity_id === selectedCase.id) ||
-          (selectedCase.incident_id && log.entity_type === 'IncidentReport' && log.entity_id === selectedCase.incident_id) ||
-          (selectedCase.animal_id && log.entity_type === 'Animal' && log.entity_id === selectedCase.animal_id) ||
-          (log.entity_type === 'Treatment' && store.treatments.some((t) => t.id === log.entity_id && t.animal_id === selectedCase.animal_id))
-      )
+    ? store.activityLogs.filter((log) => {
+        const rawCaseId = selectedCase.id.replace(/^case-/, '')
+        const rawLogId = String(log.entity_id).replace(/^(case|ani|inc|treat)-/, '')
+        const rawIncId = selectedCase.incident_id ? selectedCase.incident_id.replace(/^inc-/, '') : null
+        const rawAnimId = selectedCase.animal_id ? selectedCase.animal_id.replace(/^ani-/, '') : null
+
+        return (
+          (log.entity_type === 'RescueCase' && (log.entity_id === selectedCase.id || rawLogId === rawCaseId)) ||
+          (rawIncId && log.entity_type === 'IncidentReport' && (log.entity_id === selectedCase.incident_id || rawLogId === rawIncId)) ||
+          (rawAnimId && log.entity_type === 'Animal' && (log.entity_id === selectedCase.animal_id || rawLogId === rawAnimId))
+        )
+      })
     : []
 
   const sortedLogs = [...caseLogs].sort((a, b) => new Date(a.timestamp || 0).getTime() - new Date(b.timestamp || 0).getTime())

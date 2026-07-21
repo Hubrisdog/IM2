@@ -64,6 +64,7 @@ export interface Animal {
   weight: number
   color: string
   condition: string
+  notes?: string
   status: AnimalStatusType
   photo_url: string | null
   shelter_id: string | null

@@ -100,10 +100,12 @@ model Animal {
   name          String             @db.VarChar(100)
   species_id    Int
   breed         String?            @db.VarChar(100)
+  color         String?            @db.VarChar(100)
   sex           String             @db.VarChar(50)
   age_estimate  String             @db.VarChar(50)
   weight        Float
   condition     String             @db.Text
+  notes         String?            @db.Text
   status        String             @db.VarChar(50)
   photo_url     String?            @db.VarChar(255)
   ticket_id     Int?

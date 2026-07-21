@@ -130,14 +130,17 @@ export function Treatments() {
 
   // Filters
   const filteredTreatments = store.treatments.filter((t) => {
-    const animal = store.animals.find((a) => a.id === t.animal_id)
+    const rawTreatmentAnimId = (t.animal_id || '').replace(/^ani-/, '')
+    const animal = store.animals.find((a) => a.id === t.animal_id || a.id.replace(/^ani-/, '') === rawTreatmentAnimId)
     const animalName = animal ? animal.name : ''
+    const s = search.toLowerCase()
+
     return (
-      veterinarian.toLowerCase().includes(search.toLowerCase()) ||
-      diagnosis.toLowerCase().includes(search.toLowerCase()) ||
-      medication.toLowerCase().includes(search.toLowerCase()) ||
-      procedure.toLowerCase().includes(search.toLowerCase()) ||
-      animalName.toLowerCase().includes(search.toLowerCase())
+      t.veterinarian.toLowerCase().includes(s) ||
+      t.diagnosis.toLowerCase().includes(s) ||
+      t.medication.toLowerCase().includes(s) ||
+      t.procedure.toLowerCase().includes(s) ||
+      animalName.toLowerCase().includes(s)
     )
   })
 
@@ -194,7 +197,8 @@ export function Treatments() {
               </TableRow>
             ) : (
               filteredTreatments.map((t) => {
-                const animal = store.animals.find((a) => a.id === t.animal_id)
+                const rawTreatmentAnimId = (t.animal_id || '').replace(/^ani-/, '')
+                const animal = store.animals.find((a) => a.id === t.animal_id || a.id.replace(/^ani-/, '') === rawTreatmentAnimId)
 
                 return (
                   <TableRow key={t.id}>
