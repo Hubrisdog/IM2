@@ -604,9 +604,18 @@ export function Rescuers() {
                 </div>
               </div>
 
+              <div className='space-y-1 bg-blue-500/10 p-3 rounded-xl border border-blue-500/30 text-xs'>
+                <span className='font-bold text-blue-700 dark:text-blue-300 block'>
+                  🔐 Automatic System Account Provisioning
+                </span>
+                <p className='text-muted-foreground leading-relaxed'>
+                  Creating this profile automatically provisions a system user account. The personnel can immediately log in using their email and default password <code className='font-mono font-bold bg-muted px-1 py-0.5 rounded text-foreground'>agent123</code>.
+                </p>
+              </div>
+
               <div className='space-y-1'>
-                <span className='text-sm font-medium'>Skills & Qualifications</span>
-                <Input value={skills} onChange={(e) => setSkills(e.target.value)} placeholder='Canine Trapping, First Aid, Emergency Driving' />
+                <span className='text-sm font-medium'>Skills & Specializations</span>
+                <Input value={skills} onChange={(e) => setSkills(e.target.value)} placeholder='Canine Trapping, Emergency First Aid' />
               </div>
             </div>
             <DialogFooter>
