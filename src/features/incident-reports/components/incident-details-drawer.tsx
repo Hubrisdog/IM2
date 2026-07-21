@@ -78,18 +78,18 @@ export function IncidentDetailsDrawer({
     ? '🚓 Government Partner'
     : '👤 Citizen Reporter'
 
-  // Severity Badges
+  // Severity Badges (Clean UI without circle emojis)
   const getPriorityBadge = (priority: string) => {
     switch (priority) {
       case 'Critical':
-        return <Badge className='bg-red-500 text-white font-bold gap-1'>🔴 Critical Priority</Badge>
+        return <Badge className='bg-red-500 text-white font-bold'>Critical Priority</Badge>
       case 'High':
-        return <Badge className='bg-amber-500 text-slate-950 font-bold gap-1'>🟠 High Priority</Badge>
+        return <Badge className='bg-amber-500 text-slate-950 font-bold'>High Priority</Badge>
       case 'Medium':
-        return <Badge className='bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-yellow-500/30 font-semibold gap-1'>🟡 Medium</Badge>
+        return <Badge className='bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 font-semibold'>Medium</Badge>
       case 'Low':
       default:
-        return <Badge className='bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 font-semibold gap-1'>🟢 Low</Badge>
+        return <Badge className='bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 font-semibold'>Low</Badge>
     }
   }
 

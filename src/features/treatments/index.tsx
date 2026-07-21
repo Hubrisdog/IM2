@@ -231,18 +231,18 @@ export function MedicalTreatments() {
     return <span className='inline-flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400'>🩺 Veterinary Checkup</span>
   }
 
-  // Treatment Status Badges
+  // Treatment Status Badges (Clean UI without circle emojis)
   const getStatusBadge = (t: MedicalTreatment, status?: string) => {
     if ((t.notes || '').toLowerCase().includes('critical') || (t.diagnosis || '').toLowerCase().includes('fracture')) {
-      return <Badge className='bg-red-500 text-white font-bold gap-1 text-[10px] shadow-sm'>🔴 Critical</Badge>
+      return <Badge className='bg-red-500 text-white font-bold text-[10px] shadow-sm'>Critical</Badge>
     }
     if (status === 'Recovered' || status === 'Adopted' || status === 'Released') {
-      return <Badge className='bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 font-bold text-[10px]'>🟢 Completed</Badge>
+      return <Badge className='bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 font-bold text-[10px]'>Completed</Badge>
     }
     if (status === 'Under Treatment') {
-      return <Badge className='bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/30 font-bold text-[10px]'>🟡 Ongoing</Badge>
+      return <Badge className='bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 font-bold text-[10px]'>Ongoing</Badge>
     }
-    return <Badge className='bg-blue-500/20 text-blue-700 dark:text-blue-400 border-blue-500/30 font-bold text-[10px]'>🔵 Scheduled</Badge>
+    return <Badge className='bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30 font-bold text-[10px]'>Scheduled</Badge>
   }
 
   // Follow-up Countdown
@@ -255,19 +255,19 @@ export function MedicalTreatments() {
     if (diffDays < 0) {
       return (
         <span className='text-[10px] font-mono font-bold text-red-600 dark:text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded border border-red-500/20 animate-pulse'>
-          🔴 OVERDUE ({Math.abs(diffDays)}d)
+          OVERDUE ({Math.abs(diffDays)}d)
         </span>
       )
     } else if (diffDays === 0) {
       return (
         <span className='text-[10px] font-mono font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20'>
-          🟡 TODAY
+          TODAY
         </span>
       )
     } else if (diffDays === 1) {
       return (
         <span className='text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20'>
-          🟢 Tomorrow
+          Tomorrow
         </span>
       )
     } else {
@@ -319,10 +319,10 @@ export function MedicalTreatments() {
           </span>
           {[
             { id: 'All', label: 'All Records' },
-            { id: 'Critical', label: '🔴 Critical Patients' },
-            { id: 'Ongoing', label: '🟡 Ongoing Treatment' },
-            { id: 'FollowUpToday', label: '📅 Follow-up Today' },
-            { id: 'Completed', label: '🟢 Recovered / Completed' },
+            { id: 'Critical', label: 'Critical Patients' },
+            { id: 'Ongoing', label: 'Ongoing Treatment' },
+            { id: 'FollowUpToday', label: 'Follow-up Today' },
+            { id: 'Completed', label: 'Recovered / Completed' },
           ].map((chip) => (
             <Button
               key={chip.id}

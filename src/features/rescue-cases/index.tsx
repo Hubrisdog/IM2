@@ -234,18 +234,18 @@ export function RescueCases() {
   // Pending Incidents Count
   const pendingIncidentsCount = store.incidents.filter((inc) => inc.status === 'Pending').length
 
-  // High-Impact Priority Badges
+  // Priority Badges (Clean UI without circle emojis)
   const getPriorityBadge = (priority: SeverityType) => {
     switch (priority) {
       case 'Critical':
-        return <Badge className='bg-red-500 text-white font-bold gap-1 text-[11px] shadow-sm'>🔴 Critical</Badge>
+        return <Badge className='bg-red-500 text-white font-bold text-[11px] shadow-sm'>Critical</Badge>
       case 'High':
-        return <Badge className='bg-amber-500 text-slate-950 font-bold gap-1 text-[11px] shadow-sm'>🟠 High</Badge>
+        return <Badge className='bg-amber-500 text-slate-950 font-bold text-[11px] shadow-sm'>High</Badge>
       case 'Medium':
-        return <Badge className='bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-yellow-500/30 font-semibold text-[11px]'>🟡 Medium</Badge>
+        return <Badge className='bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 font-semibold text-[11px]'>Medium</Badge>
       case 'Low':
       default:
-        return <Badge className='bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 font-semibold text-[11px]'>🟢 Low</Badge>
+        return <Badge className='bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 font-semibold text-[11px]'>Low</Badge>
     }
   }
 

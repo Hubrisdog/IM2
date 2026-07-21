@@ -250,18 +250,18 @@ export function IncidentReports() {
     }
   }
 
-  // Priority Badge
+  // Priority Badges (Clean UI without circle emojis)
   const getPriorityBadge = (priority: SeverityType) => {
     switch (priority) {
       case 'Critical':
-        return <Badge className='bg-red-500 text-white font-bold gap-1 text-[11px] shadow-sm'>🔴 Critical</Badge>
+        return <Badge className='bg-red-500 text-white font-bold text-[11px] shadow-sm'>Critical</Badge>
       case 'High':
-        return <Badge className='bg-amber-500 text-slate-950 font-bold gap-1 text-[11px] shadow-sm'>🟠 High</Badge>
+        return <Badge className='bg-amber-500 text-slate-950 font-bold text-[11px] shadow-sm'>High</Badge>
       case 'Medium':
-        return <Badge className='bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-yellow-500/30 font-semibold text-[11px]'>🟡 Medium</Badge>
+        return <Badge className='bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 font-semibold text-[11px]'>Medium</Badge>
       case 'Low':
       default:
-        return <Badge className='bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 font-semibold text-[11px]'>🟢 Low</Badge>
+        return <Badge className='bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 font-semibold text-[11px]'>Low</Badge>
     }
   }
 
@@ -271,25 +271,25 @@ export function IncidentReports() {
     if (elapsedMins < 30) {
       return (
         <span className='text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20'>
-          🟢 {elapsedMins} mins
+          {elapsedMins} mins
         </span>
       )
     } else if (elapsedMins < 60) {
       return (
         <span className='text-[10px] font-mono font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20'>
-          🟡 {elapsedMins} mins
+          {elapsedMins} mins
         </span>
       )
     } else if (elapsedMins < 240) {
       return (
         <span className='text-[10px] font-mono font-bold text-orange-600 dark:text-orange-400 bg-orange-500/10 px-1.5 py-0.5 rounded border border-orange-500/20'>
-          🟠 {Math.round(elapsedMins / 60)} hrs
+          {Math.round(elapsedMins / 60)} hrs
         </span>
       )
     } else {
       return (
         <span className='text-[10px] font-mono font-bold text-red-600 dark:text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded border border-red-500/20 animate-pulse'>
-          🔴 Overdue ({Math.round(elapsedMins / 60)} hrs)
+          Overdue ({Math.round(elapsedMins / 60)} hrs)
         </span>
       )
     }
