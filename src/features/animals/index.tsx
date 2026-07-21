@@ -22,28 +22,58 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
-import { Plus, Search, Edit2, Trash2, PawPrint, Eye } from 'lucide-react'
+import {
+  Plus,
+  Search,
+  Edit2,
+  Trash2,
+  Eye,
+  LayoutGrid,
+  List,
+  Home,
+  Trees,
+  SlidersHorizontal,
+  Clock,
+  Stethoscope,
+  Heart,
+  Sparkles,
+  AlertTriangle,
+} from 'lucide-react'
 import { AnimalPhotoUpload } from './components/animal-photo-upload'
 import { getSpeciesPlaceholder } from './utils/placeholders'
 import { AnimalProfileDialog } from './components/animal-profile-dialog'
+import { AnimalStatsHeader } from './components/animal-stats-header'
+import { AnimalCardGrid } from './components/animal-card-grid'
+import { AnimalSidebarWidgets } from './components/animal-sidebar-widgets'
+import { ReadyModal } from './components/ready-modal'
+import { getDaysInShelter } from './utils/animal-helpers'
+
+type ViewMode = 'table' | 'gallery'
+type SortMode = 'newest' | 'oldest' | 'longest_stay' | 'adoptable' | 'releasable'
 
 export function Animals() {
   const store = useRescueHubStore()
   const userRole = useAuthStore((state) => state.auth.user?.role?.[0] || 'Rescuer')
-  const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('All')
 
-  // Dialog States
+  // Search, Filters, View & Sort States
+  const [search, setSearch] = useState('')
+  const [statusChip, setStatusChip] = useState('All')
+  const [speciesFilter, setSpeciesFilter] = useState('All')
+  const [viewMode, setViewMode] = useState<ViewMode>('gallery')
+  const [sortMode, setSortMode] = useState<SortMode>('newest')
+
+  // Dialog & Modal States
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
+  const [readyModalType, setReadyModalType] = useState<'adoption' | 'release' | null>(null)
 
   const [selectedAnimal, setSelectedAnimal] = useState<Animal | null>(null)
 
   // Form States
   const [name, setName] = useState('')
-  const [species, setSpecies] = useState('')
+  const [species, setSpecies] = useState('Dog')
   const [breed, setBreed] = useState('')
   const [sex, setSex] = useState('Unknown')
   const [estimatedAge, setEstimatedAge] = useState('')
@@ -101,7 +131,7 @@ export function Animals() {
       status,
       photo_url: finalPhoto,
       shelter_id: shelterId || null,
-      case_id: caseId || null
+      case_id: caseId || null,
     })
 
     setIsAddOpen(false)
@@ -143,7 +173,7 @@ export function Animals() {
       status,
       photo_url: photoUrl || null,
       shelter_id: shelterId || null,
-      case_id: caseId || null
+      case_id: caseId || null,
     })
 
     setIsEditOpen(false)
@@ -162,186 +192,396 @@ export function Animals() {
     toast.success(`Animal record for "${selectedAnimal.name}" deleted.`)
   }
 
-  // Filters
+  // Enhanced Filtering & Searching
   const filteredAnimals = store.animals.filter((a) => {
+    const s = search.toLowerCase()
+    const rawAnimShelterId = (a.shelter_id || '').replace(/^sh-/, '')
+    const shelter = store.shelters.find(
+      (sh) => sh.id === a.shelter_id || sh.id.replace(/^sh-/, '') === rawAnimShelterId
+    )
+    const rawAnimId = (a.id || '').replace(/^ani-/, '')
+    const treatment = store.treatments.find(
+      (t) => (t.animal_id || '').replace(/^ani-/, '') === rawAnimId || t.animal_id === a.id
+    )
+
     const matchesSearch =
-      a.name.toLowerCase().includes(search.toLowerCase()) ||
-      a.species.toLowerCase().includes(search.toLowerCase()) ||
-      a.breed.toLowerCase().includes(search.toLowerCase()) ||
-      a.color.toLowerCase().includes(search.toLowerCase())
+      a.name.toLowerCase().includes(s) ||
+      a.species.toLowerCase().includes(s) ||
+      a.breed.toLowerCase().includes(s) ||
+      a.color.toLowerCase().includes(s) ||
+      a.status.toLowerCase().includes(s) ||
+      (shelter && shelter.name.toLowerCase().includes(s)) ||
+      (treatment && (treatment.diagnosis.toLowerCase().includes(s) || treatment.veterinarian.toLowerCase().includes(s)))
 
-    const matchesStatus = statusFilter === 'All' || a.status === statusFilter
+    // Status Chip Filter
+    const isWild = ['Bird', 'Reptile', 'Snake', 'Monkey'].includes(a.species)
+    let matchesChip = true
 
-    return matchesSearch && matchesStatus
+    if (statusChip === 'Under Treatment') {
+      matchesChip = a.status === 'Under Treatment'
+    } else if (statusChip === 'Ready for Adoption') {
+      matchesChip = a.status === 'Recovered' && !isWild
+    } else if (statusChip === 'Ready for Release') {
+      matchesChip = a.status === 'Recovered' && isWild
+    } else if (statusChip === 'Adopted') {
+      matchesChip = a.status === 'Adopted'
+    } else if (statusChip === 'Released') {
+      matchesChip = a.status === 'Released'
+    } else if (statusChip === 'Critical Cases') {
+      const c = (a.condition || '').toLowerCase()
+      const n = (a.notes || '').toLowerCase()
+      matchesChip = c.includes('critical') || c.includes('severe') || n.includes('critical')
+    }
+
+    // Species Icon Filter
+    let matchesSpecies = true
+    if (speciesFilter !== 'All') {
+      if (speciesFilter === 'Reptiles') {
+        matchesSpecies = a.species === 'Reptile' || a.species === 'Snake'
+      } else if (speciesFilter === 'Others') {
+        matchesSpecies = !['Dog', 'Cat', 'Bird', 'Rabbit', 'Horse', 'Chicken', 'Reptile', 'Snake'].includes(a.species)
+      } else {
+        matchesSpecies = a.species.toLowerCase() === speciesFilter.toLowerCase().replace(/s$/, '')
+      }
+    }
+
+    return matchesSearch && matchesChip && matchesSpecies
   })
 
+  // Sorting Logic
+  const sortedAnimals = [...filteredAnimals].sort((a, b) => {
+    if (sortMode === 'newest') {
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    } else if (sortMode === 'oldest') {
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    } else if (sortMode === 'longest_stay') {
+      return getDaysInShelter(b.created_at) - getDaysInShelter(a.created_at)
+    } else if (sortMode === 'adoptable') {
+      return a.status === 'Recovered' ? -1 : 1
+    } else if (sortMode === 'releasable') {
+      return a.status === 'Released' || (a.status === 'Recovered' && ['Bird', 'Reptile', 'Snake', 'Monkey'].includes(a.species)) ? -1 : 1
+    }
+    return 0
+  })
+
+  // Helper Badge Colors for Table View
   const getStatusBadge = (st: AnimalStatusType) => {
     switch (st) {
       case 'Intake':
-        return 'bg-orange-100 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 border-orange-500/20'
+        return 'bg-orange-500/15 text-orange-600 dark:text-orange-400 border-orange-500/30'
       case 'Under Treatment':
-        return 'bg-rose-100 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border-rose-500/20'
+        return 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30'
       case 'Recovered':
-        return 'bg-emerald-100 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+        return 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
       case 'Adopted':
-        return 'bg-sky-100 dark:bg-sky-950/30 text-sky-600 dark:text-sky-400 border-sky-500/20'
+        return 'bg-sky-500/15 text-sky-600 dark:text-sky-400 border-sky-500/30'
       case 'Released':
-        return 'bg-purple-100 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 border-purple-500/20'
+        return 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30'
     }
   }
 
+  // Species List for Icon Quick Filters
+  const speciesList = [
+    { label: 'All', icon: '🐾', name: 'All' },
+    { label: 'Dogs', icon: '🐶', name: 'Dogs' },
+    { label: 'Cats', icon: '🐱', name: 'Cats' },
+    { label: 'Birds', icon: '🐦', name: 'Birds' },
+    { label: 'Rabbits', icon: '🐰', name: 'Rabbits' },
+    { label: 'Horses', icon: '🐴', name: 'Horses' },
+    { label: 'Chickens', icon: '🐔', name: 'Chickens' },
+    { label: 'Reptiles', icon: '🐍', name: 'Reptiles' },
+    { label: 'Others', icon: '🐵', name: 'Others' },
+  ]
 
+  // Status Chip Options
+  const statusChips = [
+    { label: 'All', icon: Sparkles },
+    { label: 'Under Treatment', icon: Stethoscope },
+    { label: 'Ready for Adoption', icon: Home },
+    { label: 'Ready for Release', icon: Trees },
+    { label: 'Adopted', icon: Heart },
+    { label: 'Released', icon: Sparkles },
+    { label: 'Critical Cases', icon: AlertTriangle },
+  ]
 
   return (
-    <div className='flex-1 space-y-4 p-8 pt-6'>
-      <div className='flex items-center justify-between space-y-2'>
+    <div className='flex-1 space-y-4 p-6 pt-4 max-w-[1600px] mx-auto'>
+      {/* Module Title Header & Quick Action Buttons */}
+      <div className='flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2 border-b'>
         <div>
-          <h2 className='text-3xl font-bold tracking-tight'>Animals Register</h2>
-          <p className='text-muted-foreground'>
-            Manage registered animals, track their conditions, and oversee their rescue and shelter statuses.
+          <h2 className='text-3xl font-black tracking-tight text-foreground flex items-center gap-2'>
+            🐾 Animal Operations Registry
+          </h2>
+          <p className='text-xs text-muted-foreground mt-0.5'>
+            Central operational hub tracking rescued animals from intake to adoption & wild habitat release.
           </p>
         </div>
-        {(userRole === 'Admin' || userRole === 'Dispatcher') && (
-          <Button onClick={handleOpenAdd} className='flex gap-2'>
-            <Plus className='h-4 w-4' /> Add Animal Record
+
+        <div className='flex items-center gap-2 flex-wrap w-full sm:w-auto'>
+          {/* Quick Action: Ready for Adoption */}
+          <Button
+            size='sm'
+            onClick={() => setReadyModalType('adoption')}
+            className='bg-blue-600 hover:bg-blue-700 text-white gap-1.5 shadow-md text-xs font-bold'
+          >
+            <Home className='h-3.5 w-3.5' /> 🏠 Ready for Adoption
           </Button>
-        )}
+
+          {/* Quick Action: Ready for Release */}
+          <Button
+            size='sm'
+            onClick={() => setReadyModalType('release')}
+            className='bg-teal-600 hover:bg-teal-700 text-white gap-1.5 shadow-md text-xs font-bold'
+          >
+            <Trees className='h-3.5 w-3.5' /> 🌿 Ready for Release
+          </Button>
+
+          {(userRole === 'Admin' || userRole === 'Dispatcher') && (
+            <Button onClick={handleOpenAdd} size='sm' className='flex gap-1.5 text-xs font-bold'>
+              <Plus className='h-4 w-4' /> Add Animal
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* Filter Toolbar */}
-      <div className='flex flex-wrap items-center justify-between gap-4 py-4 bg-muted/20 p-4 rounded-lg border'>
-        <div className='flex items-center gap-2 max-w-sm w-full'>
-          <Search className='h-4 w-4 text-muted-foreground' />
+      {/* 1. Dashboard Statistics Header & Featured Animal Card */}
+      <AnimalStatsHeader animals={store.animals} onSelectAnimal={handleOpenProfile} />
+
+      {/* 2. Quick Status Filter Chips */}
+      <div className='flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar'>
+        <span className='text-[11px] font-bold text-muted-foreground uppercase tracking-wider shrink-0 mr-1'>
+          Status Filter:
+        </span>
+        {statusChips.map((chip) => {
+          const Icon = chip.icon
+          const isActive = statusChip === chip.label
+          return (
+            <button
+              key={chip.label}
+              onClick={() => setStatusChip(chip.label)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-semibold border transition-all shrink-0 text-xs ${
+                isActive
+                  ? 'bg-teal-500 text-white border-teal-500 shadow-sm shadow-teal-500/20'
+                  : 'bg-card text-muted-foreground border-border hover:bg-muted/30 hover:text-foreground'
+              }`}
+            >
+              <Icon className='h-3 w-3' /> {chip.label}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* 3. Species Quick Filter Buttons */}
+      <div className='flex items-center gap-2 overflow-x-auto py-1 bg-muted/20 p-2 rounded-xl border border-teal-500/10 no-scrollbar'>
+        <span className='text-[11px] font-bold text-muted-foreground uppercase tracking-wider shrink-0 px-2'>
+          Species:
+        </span>
+        {speciesList.map((sp) => {
+          const isActive = speciesFilter === sp.name
+          return (
+            <Button
+              key={sp.name}
+              variant={isActive ? 'default' : 'outline'}
+              size='sm'
+              onClick={() => setSpeciesFilter(sp.name)}
+              className={`h-8 text-xs font-bold gap-1 rounded-lg shrink-0 ${
+                isActive
+                  ? 'bg-teal-600 hover:bg-teal-700 text-white shadow'
+                  : 'border-teal-500/10 hover:bg-teal-500/5'
+              }`}
+            >
+              <span>{sp.icon}</span> {sp.label}
+            </Button>
+          )
+        })}
+      </div>
+
+      {/* Toolbar: Search, Sort & View Mode Toggle */}
+      <div className='flex flex-wrap items-center justify-between gap-3 bg-card p-3.5 rounded-xl border shadow-sm'>
+        {/* Search Bar */}
+        <div className='flex items-center gap-2 max-w-md w-full'>
+          <Search className='h-4 w-4 text-muted-foreground shrink-0' />
           <Input
-            placeholder='Search name, species, breed, color...'
+            placeholder='Search by animal name, species, shelter, diagnosis, vet, or status...'
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className='h-9'
+            className='h-9 text-xs'
           />
         </div>
-        <div className='flex items-center gap-2'>
-          <span className='text-sm font-medium'>Status Filter:</span>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className='flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm'
-          >
-            <option value='All'>All Statuses</option>
-            <option value='Intake'>Intake</option>
-            <option value='Under Treatment'>Under Treatment</option>
-            <option value='Recovered'>Recovered</option>
-            <option value='Adopted'>Adopted</option>
-            <option value='Released'>Released</option>
-          </select>
+
+        {/* Sort & View Mode Controls */}
+        <div className='flex items-center gap-2 ml-auto'>
+          {/* Sort Dropdown */}
+          <div className='flex items-center gap-1.5 text-xs'>
+            <SlidersHorizontal className='h-3.5 w-3.5 text-muted-foreground' />
+            <select
+              value={sortMode}
+              onChange={(e) => setSortMode(e.target.value as SortMode)}
+              className='flex h-9 rounded-md border border-input bg-background px-2 py-1 text-xs shadow-sm focus:outline-none focus:ring-1 focus:ring-ring text-foreground font-medium'
+            >
+              <option value='newest'>Sort by Newest</option>
+              <option value='oldest'>Sort by Oldest</option>
+              <option value='longest_stay'>Longest Shelter Stay</option>
+              <option value='adoptable'>Ready for Adoption First</option>
+              <option value='releasable'>Ready for Release First</option>
+            </select>
+          </div>
+
+          {/* View Toggle (Table vs Gallery) */}
+          <div className='flex items-center bg-muted/40 p-1 rounded-lg border'>
+            <Button
+              variant={viewMode === 'gallery' ? 'secondary' : 'ghost'}
+              size='sm'
+              onClick={() => setViewMode('gallery')}
+              className='h-7 px-2 text-xs gap-1 font-semibold'
+            >
+              <LayoutGrid className='h-3.5 w-3.5' /> Gallery
+            </Button>
+            <Button
+              variant={viewMode === 'table' ? 'secondary' : 'ghost'}
+              size='sm'
+              onClick={() => setViewMode('table')}
+              className='h-7 px-2 text-xs gap-1 font-semibold'
+            >
+              <List className='h-3.5 w-3.5' /> Table
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Animals Table */}
-      <div className='rounded-md border bg-card'>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className='w-[80px]'>Photo</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Species & Breed</TableHead>
-              <TableHead>Sex & Age</TableHead>
-              <TableHead>Weight</TableHead>
-              <TableHead>Shelter</TableHead>
-              <TableHead>Case Ref</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className='text-right'>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredAnimals.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={9} className='h-24 text-center text-muted-foreground'>
-                  No animal records registered yet. Click "Add Animal Record" to register an animal.
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredAnimals.map((a) => {
-                const rawAnimShelterId = (a.shelter_id || '').replace(/^sh-/, '')
-                const shelter = store.shelters.find((s) => s.id === a.shelter_id || s.id.replace(/^sh-/, '') === rawAnimShelterId)
-
-                const rawAnimCaseId = (a.case_id || '').replace(/^case-/, '')
-                const rescueCase = store.cases.find((c) => c.id === a.case_id || c.id.replace(/^case-/, '') === rawAnimCaseId)
-
-                return (
-                  <TableRow key={a.id}>
-                    <TableCell>
-                      <img
-                        src={a.photo_url || getSpeciesPlaceholder(a.species)}
-                        alt={a.name}
-                        className='h-10 w-10 rounded-full object-cover border'
-                      />
-                    </TableCell>
-                    <TableCell className='font-semibold'>{a.name}</TableCell>
-                    <TableCell>
-                      <div className='font-medium'>{a.species}</div>
-                      <div className='text-xs text-muted-foreground'>{a.breed}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div className='text-sm'>{a.sex}</div>
-                      <div className='text-xs text-muted-foreground'>{a.estimated_age}</div>
-                    </TableCell>
-                    <TableCell>{a.weight} kg</TableCell>
-                    <TableCell>{shelter ? shelter.name : <span className='text-muted-foreground italic text-xs'>None</span>}</TableCell>
-                    <TableCell>
-                      {rescueCase ? (
-                        <span className='font-mono text-xs font-semibold bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded text-blue-600 dark:text-blue-400'>
-                          {rescueCase.case_number}
-                        </span>
-                      ) : (
-                        <span className='text-muted-foreground italic text-xs'>None</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getStatusBadge(a.status)} variant='secondary'>
-                        {a.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className='text-right'>
-                      <div className='flex items-center justify-end gap-1'>
-                        <Button
-                          variant='ghost'
-                          size='icon'
-                          className='h-8 w-8 text-teal-600 dark:text-teal-400 hover:bg-teal-500/10'
-                          onClick={() => handleOpenProfile(a)}
-                          title='View Animal Profile'
-                        >
-                          <Eye className='h-3.5 w-3.5' />
-                        </Button>
-                        {(userRole === 'Admin' || userRole === 'Dispatcher' || userRole === 'Veterinarian') && (
-                          <Button
-                            variant='ghost'
-                            size='icon'
-                            className='h-8 w-8 text-muted-foreground'
-                            onClick={() => handleOpenEdit(a)}
-                            title='Edit Record'
-                          >
-                            <Edit2 className='h-3.5 w-3.5' />
-                          </Button>
-                        )}
-                        {userRole === 'Admin' && (
-                          <Button
-                            variant='ghost'
-                            size='icon'
-                            className='h-8 w-8 text-rose-500 hover:bg-rose-500/10 hover:text-rose-500'
-                            onClick={() => handleOpenDelete(a)}
-                            title='Delete Record'
-                          >
-                            <Trash2 className='h-3.5 w-3.5' />
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
+      {/* Main Content Layout: Gallery / Table (Left 9 Cols) + Widgets Sidebar (Right 3 Cols) */}
+      <div className='grid grid-cols-1 lg:grid-cols-12 gap-6'>
+        {/* Registry View Area (9 Cols) */}
+        <div className='lg:col-span-9 space-y-4'>
+          {viewMode === 'gallery' ? (
+            <AnimalCardGrid
+              animals={sortedAnimals}
+              shelters={store.shelters}
+              userRole={userRole}
+              onSelectAnimal={handleOpenProfile}
+              onEditAnimal={handleOpenEdit}
+              onDeleteAnimal={handleOpenDelete}
+            />
+          ) : (
+            <div className='rounded-xl border bg-card overflow-hidden shadow-sm'>
+              <Table>
+                <TableHeader className='bg-muted/20'>
+                  <TableRow>
+                    <TableHead className='w-[70px]'>Photo</TableHead>
+                    <TableHead>Animal ID & Name</TableHead>
+                    <TableHead>Species & Breed</TableHead>
+                    <TableHead>Sex & Age</TableHead>
+                    <TableHead>Weight</TableHead>
+                    <TableHead>Shelter</TableHead>
+                    <TableHead>Days in Shelter</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className='text-right'>Actions</TableHead>
                   </TableRow>
-                )
-              })
-            )}
-          </TableBody>
-        </Table>
+                </TableHeader>
+                <TableBody>
+                  {sortedAnimals.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={9} className='h-32 text-center text-muted-foreground'>
+                        No animal records match your search or filter options.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    sortedAnimals.map((a) => {
+                      const rawAnimShelterId = (a.shelter_id || '').replace(/^sh-/, '')
+                      const shelter = store.shelters.find(
+                        (s) => s.id === a.shelter_id || s.id.replace(/^sh-/, '') === rawAnimShelterId
+                      )
+                      const days = getDaysInShelter(a.created_at)
+
+                      return (
+                        <TableRow key={a.id} className='hover:bg-muted/20 transition-colors'>
+                          <TableCell>
+                            <img
+                              src={a.photo_url || getSpeciesPlaceholder(a.species)}
+                              alt={a.name}
+                              className='h-10 w-10 rounded-lg object-cover border bg-slate-800'
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <div className='font-bold text-foreground'>{a.name}</div>
+                            <div className='text-[10px] font-mono text-muted-foreground'>ANM-00{a.id}</div>
+                          </TableCell>
+                          <TableCell>
+                            <div className='font-medium text-foreground'>{a.species}</div>
+                            <div className='text-xs text-muted-foreground'>{a.breed}</div>
+                          </TableCell>
+                          <TableCell>
+                            <div className='text-xs font-medium'>{a.sex}</div>
+                            <div className='text-[11px] text-muted-foreground'>{a.estimated_age}</div>
+                          </TableCell>
+                          <TableCell className='text-xs font-medium'>{a.weight} kg</TableCell>
+                          <TableCell className='text-xs'>
+                            {shelter ? shelter.name : <span className='text-muted-foreground italic'>Unassigned</span>}
+                          </TableCell>
+                          <TableCell>
+                            <span className='font-mono text-xs font-semibold bg-muted px-2 py-0.5 rounded'>
+                              {days} days
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={getStatusBadge(a.status)} variant='secondary'>
+                              {a.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className='text-right'>
+                            <div className='flex items-center justify-end gap-1'>
+                              <Button
+                                variant='ghost'
+                                size='icon'
+                                className='h-8 w-8 text-teal-600 dark:text-teal-400 hover:bg-teal-500/10'
+                                onClick={() => handleOpenProfile(a)}
+                                title='View Profile'
+                              >
+                                <Eye className='h-3.5 w-3.5' />
+                              </Button>
+                              {(userRole === 'Admin' || userRole === 'Dispatcher' || userRole === 'Veterinarian') && (
+                                <Button
+                                  variant='ghost'
+                                  size='icon'
+                                  className='h-8 w-8 text-muted-foreground'
+                                  onClick={() => handleOpenEdit(a)}
+                                  title='Edit Record'
+                                >
+                                  <Edit2 className='h-3.5 w-3.5' />
+                                </Button>
+                              )}
+                              {userRole === 'Admin' && (
+                                <Button
+                                  variant='ghost'
+                                  size='icon'
+                                  className='h-8 w-8 text-rose-500 hover:bg-rose-500/10'
+                                  onClick={() => handleOpenDelete(a)}
+                                  title='Delete Record'
+                                >
+                                  <Trash2 className='h-3.5 w-3.5' />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </div>
+
+        {/* Widgets Sidebar (3 Cols) */}
+        <div className='lg:col-span-3 space-y-4'>
+          <AnimalSidebarWidgets
+            animals={store.animals}
+            shelters={store.shelters}
+            treatments={store.treatments}
+            onSelectAnimal={handleOpenProfile}
+          />
+        </div>
       </div>
 
       {/* Add Dialog */}
@@ -369,6 +609,8 @@ export function Animals() {
                     <option value='Cat'>Cat</option>
                     <option value='Bird'>Bird</option>
                     <option value='Rabbit'>Rabbit</option>
+                    <option value='Horse'>Horse</option>
+                    <option value='Chicken'>Chicken</option>
                     <option value='Reptile'>Reptile</option>
                     <option value='Other'>Other</option>
                   </select>
@@ -511,6 +753,8 @@ export function Animals() {
                       <option value='Cat'>Cat</option>
                       <option value='Bird'>Bird</option>
                       <option value='Rabbit'>Rabbit</option>
+                      <option value='Horse'>Horse</option>
+                      <option value='Chicken'>Chicken</option>
                       <option value='Reptile'>Reptile</option>
                       <option value='Other'>Other</option>
                     </select>
@@ -648,7 +892,7 @@ export function Animals() {
         </DialogContent>
       </Dialog>
 
-      {/* Animal Profile Dialog */}
+      {/* Complete Animal Profile Dialog */}
       <AnimalProfileDialog
         animal={selectedAnimal}
         open={isProfileOpen}
@@ -657,6 +901,16 @@ export function Animals() {
           setIsProfileOpen(false)
           if (selectedAnimal) handleOpenEdit(selectedAnimal)
         }}
+      />
+
+      {/* Ready for Adoption / Release Modal */}
+      <ReadyModal
+        type={readyModalType}
+        open={readyModalType !== null}
+        onOpenChange={(open) => !open && setReadyModalType(null)}
+        animals={store.animals}
+        shelters={store.shelters}
+        onSelectAnimal={handleOpenProfile}
       />
     </div>
   )
