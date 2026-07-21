@@ -38,19 +38,20 @@ export function TreatmentDetailsDrawer({
 
   if (!treatment) return null
 
-  const rawAnimId = (treatment.animal_id || '').replace(/^ani-/, '')
+  const trtIdStr = String(treatment.id || '')
+  const rawAnimId = String(treatment.animal_id || '').replace(/^ani-/, '')
   const animal = store.animals.find(
-    (a) => a.id === treatment.animal_id || a.id.replace(/^ani-/, '') === rawAnimId
+    (a) => a.id === treatment.animal_id || String(a.id || '').replace(/^ani-/, '') === rawAnimId
   )
 
-  const rawShelterId = animal?.shelter_id?.replace(/^sh-/, '')
+  const rawShelterId = String(animal?.shelter_id || '').replace(/^sh-/, '')
   const shelter = store.shelters.find(
-    (s) => s.id === animal?.shelter_id || s.id.replace(/^sh-/, '') === rawShelterId
+    (s) => s.id === animal?.shelter_id || String(s.id || '').replace(/^sh-/, '') === rawShelterId
   )
 
   // Procedure Icons
-  const getProcedureIcon = (proc: string) => {
-    const p = proc.toLowerCase()
+  const getProcedureIcon = (proc?: string) => {
+    const p = (proc || '').toLowerCase()
     if (p.includes('vaccin') || p.includes('shot') || p.includes('iv')) return '💉 Vaccination / IV'
     if (p.includes('surg') || p.includes('amputat') || p.includes('fracture')) return '🦴 Surgery / Trauma'
     if (p.includes('medic') || p.includes('antibiot') || p.includes('pill')) return '💊 Medication Protocol'
@@ -59,14 +60,14 @@ export function TreatmentDetailsDrawer({
   }
 
   // Treatment Date
-  const treatDate = new Date(treatment.treatment_date || Date.now())
+  const treatDate = new Date(treatment.treatment_date || (treatment as any).date || treatment.created_at || Date.now())
 
   // Patient Journey Timeline Steps
   const timelineSteps = [
     { stage: '📍 Distress Call Logged', desc: 'Citizen report received and validated by dispatch center.', done: true },
     { stage: '🚑 Field Rescue & Station Intake', desc: 'Rescuer secured animal and admitted to shelter station.', done: true },
-    { stage: '🩺 Veterinary Clinical Exam', desc: `Dr. ${treatment.veterinarian} conducted physical triage assessment.`, done: true },
-    { stage: '💉 Procedure Execution', desc: `${treatment.procedure} performed successfully.`, done: true },
+    { stage: '🩺 Veterinary Clinical Exam', desc: `Dr. ${treatment.veterinarian || 'Alice Vance'} conducted physical triage assessment.`, done: true },
+    { stage: '💉 Procedure Execution', desc: `${treatment.procedure || 'Clinical checkup'} performed successfully.`, done: true },
     { stage: '💊 Medication & Rehabilitation', desc: `Administered ${treatment.medication || 'prescribed antibiotics'}.`, done: true },
     { stage: '✅ Clinical Recovery Confirmed', desc: 'Patient cleared by veterinarian and ready for adoption program.', done: animal?.status === 'Recovered' || animal?.status === 'Adopted' || animal?.status === 'Released' },
   ]
@@ -78,7 +79,7 @@ export function TreatmentDetailsDrawer({
         <SheetHeader className='space-y-2 pb-4 border-b text-left'>
           <div className='flex items-center justify-between gap-2 flex-wrap'>
             <SheetTitle className='text-xl font-black font-mono text-emerald-600 dark:text-emerald-400'>
-              TRT-2026-{treatment.id.replace(/^trt-/, '').padStart(4, '0')}
+              TRT-2026-{trtIdStr.replace(/^(trt|treat)-/, '').padStart(4, '0')}
             </SheetTitle>
             <Badge className='bg-blue-500/20 text-blue-700 dark:text-blue-400 border-blue-500/30 font-bold text-xs'>
               {getProcedureIcon(treatment.procedure)}

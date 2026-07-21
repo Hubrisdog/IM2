@@ -171,28 +171,28 @@ export function MedicalTreatments() {
   const filteredTreatments = useMemo(() => {
     return store.treatments.filter((t) => {
       const s = search.toLowerCase()
-      const rawAnimId = t.animal_id.replace(/^ani-/, '')
+      const rawAnimId = String(t.animal_id || '').replace(/^ani-/, '')
       const animal = store.animals.find(
-        (a) => a.id === t.animal_id || a.id.replace(/^ani-/, '') === rawAnimId
+        (a) => a.id === t.animal_id || String(a.id || '').replace(/^ani-/, '') === rawAnimId
       )
 
-      const rawShelterId = animal?.shelter_id?.replace(/^sh-/, '')
+      const rawShelterId = String(animal?.shelter_id || '').replace(/^sh-/, '')
       const shelter = store.shelters.find(
-        (sh) => sh.id === animal?.shelter_id || sh.id.replace(/^sh-/, '') === rawShelterId
+        (sh) => sh.id === animal?.shelter_id || String(sh.id || '').replace(/^sh-/, '') === rawShelterId
       )
 
       const matchesSearch =
-        t.diagnosis.toLowerCase().includes(s) ||
-        t.procedure.toLowerCase().includes(s) ||
-        t.veterinarian.toLowerCase().includes(s) ||
-        (animal && animal.name.toLowerCase().includes(s)) ||
-        (shelter && shelter.name.toLowerCase().includes(s))
+        (t.diagnosis || '').toLowerCase().includes(s) ||
+        (t.procedure || '').toLowerCase().includes(s) ||
+        (t.veterinarian || '').toLowerCase().includes(s) ||
+        (animal && (animal.name || '').toLowerCase().includes(s)) ||
+        (shelter && (shelter.name || '').toLowerCase().includes(s))
 
       // Quick chip filters
       const todayStr = new Date().toISOString().split('T')[0]
       let matchesChip = true
       if (chipFilter === 'Critical') {
-        matchesChip = t.notes?.toLowerCase().includes('critical') || t.procedure?.toLowerCase().includes('surgery') || t.diagnosis?.toLowerCase().includes('fracture') || false
+        matchesChip = (t.notes || '').toLowerCase().includes('critical') || (t.procedure || '').toLowerCase().includes('surgery') || (t.diagnosis || '').toLowerCase().includes('fracture') || false
       } else if (chipFilter === 'Ongoing') {
         matchesChip = animal?.status === 'Under Treatment'
       } else if (chipFilter === 'FollowUpToday') {
@@ -214,8 +214,8 @@ export function MedicalTreatments() {
   const paginatedTreatments = filteredTreatments.slice(startIndex, startIndex + itemsPerPage)
 
   // Procedure Icons
-  const getProcedureBadge = (proc: string) => {
-    const p = proc.toLowerCase()
+  const getProcedureBadge = (proc?: string) => {
+    const p = (proc || '').toLowerCase()
     if (p.includes('vaccin') || p.includes('shot') || p.includes('iv')) {
       return <span className='inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400'>💉 Vaccination / IV</span>
     }
@@ -233,7 +233,7 @@ export function MedicalTreatments() {
 
   // Treatment Status Badges
   const getStatusBadge = (t: MedicalTreatment, status?: string) => {
-    if (t.notes?.toLowerCase().includes('critical') || t.diagnosis?.toLowerCase().includes('fracture')) {
+    if ((t.notes || '').toLowerCase().includes('critical') || (t.diagnosis || '').toLowerCase().includes('fracture')) {
       return <Badge className='bg-red-500 text-white font-bold gap-1 text-[10px] shadow-sm'>🔴 Critical</Badge>
     }
     if (status === 'Recovered' || status === 'Adopted' || status === 'Released') {
@@ -393,16 +393,17 @@ export function MedicalTreatments() {
               </TableRow>
             ) : (
               paginatedTreatments.map((t) => {
-                const rawTrtId = t.id.replace(/^trt-/, '')
-                const rawAnimId = t.animal_id.replace(/^ani-/, '')
+                const trtIdStr = String(t.id || '')
+                const rawTrtId = trtIdStr.replace(/^(trt|treat)-/, '')
+                const rawAnimId = String(t.animal_id || '').replace(/^ani-/, '')
 
                 const animal = store.animals.find(
-                  (a) => a.id === t.animal_id || a.id.replace(/^ani-/, '') === rawAnimId
+                  (a) => a.id === t.animal_id || String(a.id || '').replace(/^ani-/, '') === rawAnimId
                 )
 
-                const rawShelterId = animal?.shelter_id?.replace(/^sh-/, '')
+                const rawShelterId = String(animal?.shelter_id || '').replace(/^sh-/, '')
                 const shelter = store.shelters.find(
-                  (s) => s.id === animal?.shelter_id || s.id.replace(/^sh-/, '') === rawShelterId
+                  (s) => s.id === animal?.shelter_id || String(s.id || '').replace(/^sh-/, '') === rawShelterId
                 )
 
                 const progress = getRecoveryProgress(animal?.status, t.diagnosis)
