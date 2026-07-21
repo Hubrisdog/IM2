@@ -292,9 +292,31 @@ export function RescueCases() {
               </TableRow>
             ) : (
               filteredCases.map((c) => {
-                const rescuer = store.rescuers.find((r) => r.id === c.rescuer_id)
-                const shelter = store.shelters.find((s) => s.id === c.shelter_id)
-                const animal = store.animals.find((a) => a.id === c.animal_id)
+                const rawCaseId = (c.id || '').replace(/^case-/, '')
+                const rawCaseAnimId = (c.animal_id || '').replace(/^ani-/, '')
+                const rawCaseRescuerId = (c.rescuer_id || '').replace(/^(res|agt)-/, '')
+                const rawCaseShelterId = (c.shelter_id || '').replace(/^sh-/, '')
+
+                const rescuer = store.rescuers.find((r) => {
+                  const rawRId = (r.id || '').replace(/^(res|agt)-/, '')
+                  return r.id === c.rescuer_id || rawRId === rawCaseRescuerId
+                })
+
+                const shelter = store.shelters.find((s) => {
+                  const rawSId = (s.id || '').replace(/^sh-/, '')
+                  return s.id === c.shelter_id || rawSId === rawCaseShelterId
+                })
+
+                const animal = store.animals.find((a) => {
+                  const rawAnimId = (a.id || '').replace(/^ani-/, '')
+                  const rawAnimCaseId = (a.case_id || '').replace(/^case-/, '')
+                  return (
+                    a.id === c.animal_id ||
+                    (rawCaseAnimId && rawAnimId === rawCaseAnimId) ||
+                    a.case_id === c.id ||
+                    (rawAnimCaseId && rawAnimCaseId === rawCaseId)
+                  )
+                })
 
                 return (
                   <TableRow key={c.id}>

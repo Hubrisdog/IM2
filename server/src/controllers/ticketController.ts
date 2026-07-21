@@ -13,30 +13,38 @@ export const getTickets = async (req: Request, res: Response) => {
       orderBy: { created_at: 'desc' }
     })
 
-    const mapped = tickets.map(t => {
-      const animal = t.animals[0]
-      const rescuerId = t.current_assigned_team_id ? `res-${t.current_assigned_team_id}` : null
-      const shelterId = animal?.shelter_id ? `sh-${animal.shelter_id}` : null
-      const animalId = animal ? `ani-${animal.id}` : null
-      const incidentId = t.incident_report_id ? `inc-${t.incident_report_id}` : null
+    const mapped = await Promise.all(
+      tickets.map(async (t) => {
+        let animal = t.animals[0]
+        if (!animal) {
+          animal = (await prisma.animal.findFirst({
+            where: { ticket_id: t.id }
+          })) as any
+        }
 
-      return {
-        id: `case-${t.id}`,
-        incident_id: incidentId,
-        case_number: `RC-2026-${t.id.toString().padStart(4, '0')}`,
-        report_date: t.created_at.toISOString(),
-        rescue_date: t.rescue_date ? t.rescue_date.toISOString() : null,
-        location: t.incident_report?.location || 'Unknown',
-        description: t.description,
-        severity: t.priority as any,
-        status: t.status as any,
-        rescuer_id: rescuerId,
-        shelter_id: shelterId,
-        animal_id: animalId,
-        notes: t.rescue_notes,
-        created_at: t.created_at.toISOString()
-      }
-    })
+        const rescuerId = t.current_assigned_team_id ? `res-${t.current_assigned_team_id}` : null
+        const shelterId = animal?.shelter_id ? `sh-${animal.shelter_id}` : null
+        const animalId = animal ? `ani-${animal.id}` : null
+        const incidentId = t.incident_report_id ? `inc-${t.incident_report_id}` : null
+
+        return {
+          id: `case-${t.id}`,
+          incident_id: incidentId,
+          case_number: `RC-2026-${t.id.toString().padStart(4, '0')}`,
+          report_date: t.created_at.toISOString(),
+          rescue_date: t.rescue_date ? t.rescue_date.toISOString() : null,
+          location: t.incident_report?.location || (t.subject.includes('at ') ? t.subject.split('at ')[1] : 'Central Rescue Sector'),
+          description: t.description,
+          severity: t.priority as any,
+          status: t.status as any,
+          rescuer_id: rescuerId,
+          shelter_id: shelterId,
+          animal_id: animalId,
+          notes: t.rescue_notes,
+          created_at: t.created_at.toISOString()
+        }
+      })
+    )
 
     res.json(mapped)
   } catch (error: any) {
