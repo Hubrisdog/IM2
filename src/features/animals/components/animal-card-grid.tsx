@@ -1,8 +1,8 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Eye, Edit2, Trash2, Clock, Building2, Heart, Trees, Home, Sparkles, Stethoscope } from 'lucide-react'
-import { type Animal, type Shelter } from '@/stores/rescue-hub-store'
+import { Eye, Edit2, Trash2, Clock, Building2, Heart, Trees, Home, Sparkles, Stethoscope, CheckCircle2 } from 'lucide-react'
+import { type Animal, type Shelter, useRescueHubStore } from '@/stores/rescue-hub-store'
 import { getSpeciesPlaceholder } from '../utils/placeholders'
 import { getDaysInShelter, getRecoveryProgress } from '../utils/animal-helpers'
 
@@ -23,6 +23,8 @@ export function AnimalCardGrid({
   onEditAnimal,
   onDeleteAnimal,
 }: AnimalCardGridProps) {
+  const store = useRescueHubStore()
+
   if (animals.length === 0) {
     return (
       <div className='flex flex-col items-center justify-center p-12 text-center bg-card rounded-xl border border-dashed'>
@@ -45,8 +47,20 @@ export function AnimalCardGrid({
           (s) => s.id === animal.shelter_id || s.id.replace(/^sh-/, '') === rawAnimShelterId
         )
 
+        const rawId = String(animal.id || '').replace(/^ani-/, '')
+        const animalTreatments = store.treatments.filter(
+          (t) => String(t.animal_id || '').replace(/^ani-/, '') === rawId
+        )
+        let rec: string | null = null
+        if (animalTreatments.length > 0) {
+          const sorted = [...animalTreatments].sort(
+            (x, y) => new Date(y.created_at || y.date).getTime() - new Date(x.created_at || x.date).getTime()
+          )
+          rec = sorted[0].recommendation || null
+        }
+
         const days = getDaysInShelter(animal.created_at)
-        const progress = getRecoveryProgress(animal.status, animal.condition)
+        const progress = getRecoveryProgress(animal.status, animal.condition, rec)
 
         const getOutcomeBadge = () => {
           switch (animal.status) {
@@ -63,14 +77,21 @@ export function AnimalCardGrid({
                 </Badge>
               )
             case 'Recovered':
-              const isWild = ['Bird', 'Reptile', 'Snake', 'Monkey'].includes(animal.species)
-              return isWild ? (
-                <Badge className='bg-teal-500/15 text-teal-600 dark:text-teal-400 border-teal-500/30 gap-1 text-[11px] font-semibold'>
-                  <Trees className='h-3 w-3' /> Ready to Release
+              return (
+                <Badge className='bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 gap-1 text-[11px] font-semibold'>
+                  <CheckCircle2 className='h-3 w-3' /> Medically Cleared
                 </Badge>
-              ) : (
+              )
+            case 'Ready for Adoption':
+              return (
                 <Badge className='bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30 gap-1 text-[11px] font-semibold'>
                   <Home className='h-3 w-3' /> Ready to Adopt
+                </Badge>
+              )
+            case 'Ready for Release':
+              return (
+                <Badge className='bg-teal-500/15 text-teal-600 dark:text-teal-400 border-teal-500/30 gap-1 text-[11px] font-semibold'>
+                  <Trees className='h-3 w-3' /> Ready to Release
                 </Badge>
               )
             case 'Adopted':

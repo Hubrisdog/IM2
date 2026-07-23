@@ -21,6 +21,8 @@ export type AnimalStatusType =
   | 'Intake'
   | 'Under Treatment'
   | 'Recovered'
+  | 'Ready for Adoption'
+  | 'Ready for Release'
   | 'Adopted'
   | 'Released'
 

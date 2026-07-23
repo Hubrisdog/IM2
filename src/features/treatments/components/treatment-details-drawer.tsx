@@ -50,7 +50,22 @@ export function TreatmentDetailsDrawer({
     (s) => s.id === animal?.shelter_id || String(s.id || '').replace(/^sh-/, '') === rawShelterId
   )
 
-  const progress = getRecoveryProgress(animal?.status || 'Intake', animal?.condition)
+  const progress = getRecoveryProgress(animal?.status || 'Intake', animal?.condition, treatment.recommendation)
+
+  const getRecommendationLabel = (rec?: string) => {
+    switch (rec) {
+      case 'Critical Care':
+        return '🔴 Critical Care Required'
+      case 'Continue Treatment':
+        return '🟢 Continue Treatment'
+      case 'Under Observation':
+        return '🟡 Under Observation'
+      case 'Recovered':
+        return '✅ Recovered (Medically Cleared)'
+      default:
+        return rec || '🩺 Under Clinical Care'
+    }
+  }
 
   // Procedure Icons
   const getProcedureIcon = (proc?: string) => {
@@ -190,7 +205,7 @@ export function TreatmentDetailsDrawer({
                 <CheckCircle2 className='h-4 w-4 text-emerald-500' /> Medical Clearance Decision:
               </span>
               <Badge className='bg-emerald-600 text-white font-bold text-xs shadow-sm'>
-                {(treatment as any).recommendation || (animal?.status === 'Recovered' ? 'Ready for Adoption' : 'Under Clinical Care')}
+                {getRecommendationLabel(treatment.recommendation)}
               </Badge>
             </div>
             <p className='text-muted-foreground text-[11px] leading-relaxed'>

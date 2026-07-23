@@ -78,7 +78,7 @@ export const createTreatment = async (req: Request, res: Response) => {
 
     // Automatic Animal Status Update based on Veterinary Assessment Recommendation
     let updatedAnimalStatus: string | undefined = undefined
-    if (recommendation === 'Ready for Adoption' || recommendation === 'Ready for Release') {
+    if (recommendation === 'Recovered') {
       updatedAnimalStatus = 'Recovered'
     } else if (recommendation === 'Continue Treatment' || recommendation === 'Critical Care' || recommendation === 'Under Observation') {
       updatedAnimalStatus = 'Under Treatment'
@@ -167,7 +167,7 @@ export const updateTreatment = async (req: Request, res: Response) => {
 
     // Automatic Animal Status Update based on Veterinary Assessment Recommendation
     let updatedAnimalStatus: string | undefined = undefined
-    if (recommendation === 'Ready for Adoption' || recommendation === 'Ready for Release') {
+    if (recommendation === 'Recovered') {
       updatedAnimalStatus = 'Recovered'
     } else if (recommendation === 'Continue Treatment' || recommendation === 'Critical Care' || recommendation === 'Under Observation') {
       updatedAnimalStatus = 'Under Treatment'

@@ -232,9 +232,9 @@ export function Animals() {
       if (statusChip === 'Under Treatment') {
         matchesChip = a.status === 'Under Treatment'
       } else if (statusChip === 'Ready for Adoption') {
-        matchesChip = a.status === 'Recovered' && !isWild
+        matchesChip = a.status === 'Ready for Adoption'
       } else if (statusChip === 'Ready for Release') {
-        matchesChip = a.status === 'Recovered' && isWild
+        matchesChip = a.status === 'Ready for Release'
       } else if (statusChip === 'Adopted') {
         matchesChip = a.status === 'Adopted'
       } else if (statusChip === 'Released') {
@@ -291,7 +291,6 @@ export function Animals() {
   const startIndex = (currentPage - 1) * itemsPerPage
   const paginatedAnimals = sortedAnimals.slice(startIndex, startIndex + itemsPerPage)
 
-  // Helper Badge Colors for Table View
   const getStatusBadge = (st: AnimalStatusType) => {
     switch (st) {
       case 'Intake':
@@ -300,8 +299,12 @@ export function Animals() {
         return 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
       case 'Recovered':
         return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-      case 'Adopted':
+      case 'Ready for Adoption':
         return 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
+      case 'Ready for Release':
+        return 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20'
+      case 'Adopted':
+        return 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20'
       case 'Released':
         return 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20'
     }

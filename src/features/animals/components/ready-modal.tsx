@@ -37,30 +37,10 @@ export function ReadyModal({
     ['Bird', 'Reptile', 'Snake', 'Monkey'].includes(species)
 
   const filtered = animals.filter((a) => {
-    if (a.status !== 'Recovered') return false
-
-    // 1. Fetch latest treatment recommendation
-    const rawId = String(a.id || '').replace(/^ani-/, '')
-    const animalTreatments = store.treatments.filter(
-      (t) => String(t.animal_id || '').replace(/^ani-/, '') === rawId
-    )
-    
-    let rec: string | null = null
-    if (animalTreatments.length > 0) {
-      const sorted = [...animalTreatments].sort(
-        (x, y) => new Date(y.created_at || y.date).getTime() - new Date(x.created_at || x.date).getTime()
-      )
-      rec = sorted[0].recommendation || null
-    }
-
     if (type === 'adoption') {
-      if (rec === 'Ready for Adoption') return true
-      if (rec === 'Ready for Release') return false
-      return !isWild(a.species)
+      return a.status === 'Ready for Adoption'
     } else {
-      if (rec === 'Ready for Release') return true
-      if (rec === 'Ready for Adoption') return false
-      return isWild(a.species)
+      return a.status === 'Ready for Release'
     }
   })
 

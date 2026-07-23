@@ -248,12 +248,11 @@ export function MedicalTreatments() {
     return <span className='inline-flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400'>🩺 Veterinary Checkup</span>
   }
 
-  // Treatment Status Badges (Clean UI without circle emojis)
   const getStatusBadge = (t: MedicalTreatment, status?: string) => {
-    if ((t.notes || '').toLowerCase().includes('critical') || (t.diagnosis || '').toLowerCase().includes('fracture')) {
+    if ((t.notes || '').toLowerCase().includes('critical') || (t.diagnosis || '').toLowerCase().includes('fracture') || t.recommendation === 'Critical Care') {
       return <Badge className='bg-red-500 text-white font-bold text-[10px] shadow-sm'>Critical</Badge>
     }
-    if (status === 'Recovered' || status === 'Adopted' || status === 'Released') {
+    if (status === 'Recovered' || status === 'Adopted' || status === 'Released' || status === 'Ready for Adoption' || status === 'Ready for Release') {
       return <Badge className='bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 font-bold text-[10px]'>Completed</Badge>
     }
     if (status === 'Under Treatment') {
@@ -691,7 +690,7 @@ export function MedicalTreatments() {
 
               <div className='space-y-1 bg-emerald-500/10 p-3 rounded-xl border border-emerald-500/30'>
                 <span className='text-sm font-bold text-emerald-700 dark:text-emerald-300 block'>
-                  🩺 Veterinary Medical Clearance Recommendation
+                  🩺 Medical Clearance Decision
                 </span>
                 <span className='text-xs text-muted-foreground block pb-1'>
                   Submitting this clearance automatically updates the Animal Registry status.
@@ -701,11 +700,10 @@ export function MedicalTreatments() {
                   onChange={(e) => setRecommendation(e.target.value)}
                   className='flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm font-semibold'
                 >
-                  <option value='Continue Treatment'>🟡 Continue Treatment (Remain Under Clinical Care)</option>
-                  <option value='Ready for Adoption'>🟢 Ready for Adoption (Medically Cleared)</option>
-                  <option value='Ready for Release'>🌿 Ready for Release (Wild Wildlife Cleared)</option>
-                  <option value='Under Observation'>🩺 Under Observation</option>
+                  <option value='Continue Treatment'>🟢 Continue Treatment (Remain Under Clinical Care)</option>
+                  <option value='Under Observation'>🟡 Under Observation</option>
                   <option value='Critical Care'>🔴 Critical Care Required</option>
+                  <option value='Recovered'>✅ Recovered (Medically Cleared)</option>
                 </select>
               </div>
 
@@ -789,7 +787,7 @@ export function MedicalTreatments() {
 
                 <div className='space-y-1 bg-emerald-500/10 p-3 rounded-xl border border-emerald-500/30'>
                   <span className='text-sm font-bold text-emerald-700 dark:text-emerald-300 block'>
-                    🩺 Veterinary Medical Clearance Recommendation
+                    🩺 Medical Clearance Decision
                   </span>
                   <span className='text-xs text-muted-foreground block pb-1'>
                     Submitting this clearance automatically updates the Animal Registry status.
@@ -799,11 +797,10 @@ export function MedicalTreatments() {
                     onChange={(e) => setRecommendation(e.target.value)}
                     className='flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm font-semibold'
                   >
-                    <option value='Continue Treatment'>🟡 Continue Treatment (Remain Under Clinical Care)</option>
-                    <option value='Ready for Adoption'>🟢 Ready for Adoption (Medically Cleared)</option>
-                    <option value='Ready for Release'>🌿 Ready for Release (Wild Wildlife Cleared)</option>
-                    <option value='Under Observation'>🩺 Under Observation</option>
+                    <option value='Continue Treatment'>🟢 Continue Treatment (Remain Under Clinical Care)</option>
+                    <option value='Under Observation'>🟡 Under Observation</option>
                     <option value='Critical Care'>🔴 Critical Care Required</option>
+                    <option value='Recovered'>✅ Recovered (Medically Cleared)</option>
                   </select>
                 </div>
 

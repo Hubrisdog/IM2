@@ -68,6 +68,26 @@ export function AnimalProfileDialog({
     }
   }
 
+  const handleSetReadyAdoption = async () => {
+    try {
+      await store.updateAnimal(animal.id, { status: 'Ready for Adoption' })
+      toast.success(`🏠 Status updated: ${animal.name} is now Ready for Adoption.`)
+      onOpenChange(false)
+    } catch (e) {
+      toast.error('Failed to update status.')
+    }
+  }
+
+  const handleSetReadyRelease = async () => {
+    try {
+      await store.updateAnimal(animal.id, { status: 'Ready for Release' })
+      toast.success(`🌿 Status updated: ${animal.name} is now Ready for Release.`)
+      onOpenChange(false)
+    } catch (e) {
+      toast.error('Failed to update status.')
+    }
+  }
+
   // Robust Linked entities lookup
   const rawAnimalShelterId = (animal.shelter_id || '').replace(/^sh-/, '')
   const shelter = store.shelters.find(
@@ -411,19 +431,37 @@ export function AnimalProfileDialog({
             {animal.status === 'Recovered' && (userRole === 'Admin' || userRole === 'Shelter Staff') && (
               ['Bird', 'Reptile', 'Snake', 'Monkey'].includes(animal.species) ? (
                 <Button
-                  onClick={handleReleaseWorkflow}
-                  className='text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold'
+                  onClick={handleSetReadyRelease}
+                  className='text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold animate-pulse'
                 >
-                  <Trees className='h-3.5 w-3.5' /> Process Habitat Release
+                  <Trees className='h-3.5 w-3.5' /> Set Ready for Release
                 </Button>
               ) : (
                 <Button
-                  onClick={handleAdoptWorkflow}
-                  className='text-xs gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold'
+                  onClick={handleSetReadyAdoption}
+                  className='text-xs gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold animate-pulse'
                 >
-                  <Home className='h-3.5 w-3.5' /> Process Family Adoption
+                  <Home className='h-3.5 w-3.5' /> Set Ready for Adoption
                 </Button>
               )
+            )}
+
+            {animal.status === 'Ready for Adoption' && (userRole === 'Admin' || userRole === 'Shelter Staff') && (
+              <Button
+                onClick={handleAdoptWorkflow}
+                className='text-xs gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold'
+              >
+                <Home className='h-3.5 w-3.5 animate-bounce' /> Process Family Adoption
+              </Button>
+            )}
+
+            {animal.status === 'Ready for Release' && (userRole === 'Admin' || userRole === 'Shelter Staff') && (
+              <Button
+                onClick={handleReleaseWorkflow}
+                className='text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold'
+              >
+                <Trees className='h-3.5 w-3.5 animate-bounce' /> Process Habitat Release
+              </Button>
             )}
 
             {onEditClick && (
