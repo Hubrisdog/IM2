@@ -232,9 +232,9 @@ export function Animals() {
       if (statusChip === 'Under Treatment') {
         matchesChip = a.status === 'Under Treatment'
       } else if (statusChip === 'Ready for Adoption') {
-        matchesChip = a.status === 'Ready for Adoption'
+        matchesChip = a.status === 'Ready for Adoption' || (a.status === 'Recovered' && !isWild)
       } else if (statusChip === 'Ready for Release') {
-        matchesChip = a.status === 'Ready for Release'
+        matchesChip = a.status === 'Ready for Release' || (a.status === 'Recovered' && isWild)
       } else if (statusChip === 'Adopted') {
         matchesChip = a.status === 'Adopted'
       } else if (statusChip === 'Released') {
