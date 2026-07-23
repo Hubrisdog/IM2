@@ -22,6 +22,26 @@ interface AuthState {
   }
 }
 
+function parseJwt(token: string) {
+  try {
+    const base64Url = token.split('.')[1]
+    if (!base64Url) return null
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+    const decoded = typeof window !== 'undefined' && window.atob
+      ? window.atob(base64)
+      : Buffer.from(base64, 'base64').toString('binary')
+    const jsonPayload = decodeURIComponent(
+      decoded
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    )
+    return JSON.parse(jsonPayload)
+  } catch (e) {
+    return null
+  }
+}
+
 export const useAuthStore = create<AuthState>()((set) => {
   const cookieState = getCookie(ACCESS_TOKEN)
   let initToken = ''
@@ -32,16 +52,33 @@ export const useAuthStore = create<AuthState>()((set) => {
       initToken = cookieState
     }
   }
+
+  const decoded = initToken ? parseJwt(initToken) : null
+  const initUser = decoded ? {
+    accountNo: String(decoded.id),
+    email: decoded.email,
+    role: Array.isArray(decoded.role) ? decoded.role : [decoded.role],
+    exp: decoded.exp * 1000
+  } : null
+
   return {
     auth: {
-      user: null,
+      user: initUser,
       setUser: (user) =>
         set((state) => ({ ...state, auth: { ...state.auth, user } })),
       accessToken: initToken,
       setAccessToken: (accessToken) =>
         set((state) => {
           setCookie(ACCESS_TOKEN, JSON.stringify(accessToken))
-          return { ...state, auth: { ...state.auth, accessToken } }
+          // Automatically decode the token and update the user state as well
+          const newDecoded = parseJwt(accessToken)
+          const newUser = newDecoded ? {
+            accountNo: String(newDecoded.id),
+            email: newDecoded.email,
+            role: Array.isArray(newDecoded.role) ? newDecoded.role : [newDecoded.role],
+            exp: newDecoded.exp * 1000
+          } : null
+          return { ...state, auth: { ...state.auth, accessToken, user: newUser } }
         }),
       resetAccessToken: () =>
         set((state) => {

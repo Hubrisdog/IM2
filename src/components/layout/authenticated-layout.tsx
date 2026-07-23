@@ -20,9 +20,10 @@ export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
   const navigate = useNavigate()
   const location = useLocation()
 
-  // 13. Force temporary password reset on first login
+  // 13. Force temporary password reset on first login (Exempting demo presentation accounts)
   useEffect(() => {
-    if (user?.needsPasswordReset && location.pathname !== '/settings/account') {
+    const isDemoAccount = user?.email?.endsWith('@rescuehub.org')
+    if (user?.needsPasswordReset && !isDemoAccount && location.pathname !== '/settings/account') {
       toast.error('Security Notice: You are currently using a temporary/default password. You must change your password to continue.', {
         id: 'force-reset-toast',
         duration: 10000
