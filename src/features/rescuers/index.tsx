@@ -68,6 +68,30 @@ export function Rescuers() {
   const [shelterId, setShelterId] = useState('')
   const [skills, setSkills] = useState('')
 
+  // Admin Reset Password states
+  const [isResetOpen, setIsResetOpen] = useState(false)
+  const [tempPassword, setTempPassword] = useState('')
+
+  const handleResetPassword = async (r: Rescuer) => {
+    try {
+      const rawId = r.id.replace(/^(res|agt)-/, '')
+      const token = useAuthStore.getState().auth.accessToken
+      const res = await fetch(`http://localhost:5000/api/auth/reset-password/${rawId}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      if (!res.ok) throw new Error('Reset failed')
+      const data = await res.json()
+      setTempPassword(data.tempPassword)
+      setSelectedPersonnel(r)
+      setIsResetOpen(true)
+    } catch (e) {
+      toast.error('Could not reset password.')
+    }
+  }
+
   // Handlers
   const handleOpenDrawer = (r: Rescuer) => {
     setSelectedPersonnel(r)
@@ -513,15 +537,26 @@ export function Rescuers() {
                           </Button>
                         )}
                         {userRole === 'Admin' && (
-                          <Button
-                            variant='ghost'
-                            size='icon'
-                            className='h-8 w-8 text-rose-500 hover:bg-rose-500/10'
-                            onClick={() => handleOpenDelete(r)}
-                            title='Delete Profile'
-                          >
-                            <Trash2 className='h-3.5 w-3.5' />
-                          </Button>
+                          <>
+                            <Button
+                              variant='ghost'
+                              size='icon'
+                              className='h-8 w-8 text-amber-500 hover:bg-amber-500/10'
+                              onClick={() => handleResetPassword(r)}
+                              title='Reset User Password'
+                            >
+                              <ShieldAlert className='h-3.5 w-3.5' />
+                            </Button>
+                            <Button
+                              variant='ghost'
+                              size='icon'
+                              className='h-8 w-8 text-rose-500 hover:bg-rose-500/10'
+                              onClick={() => handleOpenDelete(r)}
+                              title='Delete Profile'
+                            >
+                              <Trash2 className='h-3.5 w-3.5' />
+                            </Button>
+                          </>
                         )}
                       </div>
                     </TableCell>
@@ -731,6 +766,36 @@ export function Rescuers() {
             </Button>
             <Button variant='destructive' onClick={handleDeleteConfirm}>
               Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Admin Reset Password Dialog */}
+      <Dialog open={isResetOpen} onOpenChange={setIsResetOpen}>
+        <DialogContent className='max-w-md w-full'>
+          <DialogHeader>
+            <DialogTitle className='flex items-center gap-2 text-amber-600'>
+              <ShieldAlert className='h-5 w-5' /> Admin Security Override
+            </DialogTitle>
+            <DialogDescription>
+              Password has been reset for <strong className='text-foreground'>{selectedPersonnel?.name}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className='p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl space-y-2 text-xs'>
+            <p className='text-muted-foreground'>
+              Please share the following temporary security credential with the user. They will be forced to choose a new password upon their next login.
+            </p>
+            <div className='flex items-center justify-between bg-background p-2.5 rounded border font-mono font-bold text-sm text-foreground select-all'>
+              <span>{tempPassword}</span>
+              <Badge className='bg-amber-500 text-slate-950 font-bold'>Temporary</Badge>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button className='bg-amber-600 hover:bg-amber-700 text-white font-bold' onClick={() => setIsResetOpen(false)}>
+              Acknowledge & Close
             </Button>
           </DialogFooter>
         </DialogContent>

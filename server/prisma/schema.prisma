@@ -43,19 +43,25 @@ model Team {
 }
 
 model Agent {
-  id             Int                @id @default(autoincrement())
-  first_name     String             @db.VarChar(100)
-  last_name      String             @db.VarChar(100)
-  email          String             @unique @db.VarChar(255)
-  password       String             @db.VarChar(255)
-  phone          String             @db.VarChar(100)
-  team_id        Int?
-  role_id        Int
-  status         String             @default("Active") @db.VarChar(50)
-  team           Team?              @relation("TeamMembers", fields: [team_id], references: [id])
-  role           Role               @relation(fields: [role_id], references: [id])
-  managedTeams   Team[]             @relation("TeamManager")
-  treatments     Animal_Treatment[]
+  id                    Int                @id @default(autoincrement())
+  first_name            String             @db.VarChar(100)
+  last_name             String             @db.VarChar(100)
+  email                 String             @unique @db.VarChar(255)
+  password              String             @db.VarChar(255)
+  phone                 String             @db.VarChar(100)
+  team_id               Int?
+  role_id               Int
+  status                String             @default("Active") @db.VarChar(50)
+  last_password_change  DateTime           @default(now())
+  failed_login_attempts Int                @default(0)
+  lockout_until         DateTime?
+  password_history      String?            @db.Text
+  needs_password_reset  Boolean            @default(false)
+  last_login            DateTime?
+  team                  Team?              @relation("TeamMembers", fields: [team_id], references: [id])
+  role                  Role               @relation(fields: [role_id], references: [id])
+  managedTeams          Team[]             @relation("TeamManager")
+  treatments            Animal_Treatment[]
 }
 
 model Incident_Report {

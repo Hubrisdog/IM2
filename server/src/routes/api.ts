@@ -18,6 +18,9 @@ const router = Router()
 router.post('/auth/login', authCtrl.login)
 router.post('/auth/register', authCtrl.register)
 router.get('/auth/me', authenticateToken, authCtrl.getMe)
+router.post('/auth/change-password', authenticateToken, authCtrl.changePassword)
+router.post('/auth/reset-password/:id', authenticateToken, requireRole(['Admin']), authCtrl.adminResetPassword)
+router.get('/auth/security-profile', authenticateToken, authCtrl.getSecurityProfile)
 
 // --- Incidents (Reporting is public, management is protected) ---
 router.get('/incidents', authenticateToken, incCtrl.getIncidents)
