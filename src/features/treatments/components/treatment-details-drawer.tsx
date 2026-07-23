@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { useRescueHubStore, type MedicalTreatment } from '@/stores/rescue-hub-store'
 import { getSpeciesPlaceholder } from '@/features/animals/utils/placeholders'
+import { getRecoveryProgress } from '@/features/animals/utils/animal-helpers'
 
 interface TreatmentDetailsDrawerProps {
   treatment: MedicalTreatment | null
@@ -48,6 +49,8 @@ export function TreatmentDetailsDrawer({
   const shelter = store.shelters.find(
     (s) => s.id === animal?.shelter_id || String(s.id || '').replace(/^sh-/, '') === rawShelterId
   )
+
+  const progress = getRecoveryProgress(animal?.status || 'Intake', animal?.condition)
 
   // Procedure Icons
   const getProcedureIcon = (proc?: string) => {
@@ -193,6 +196,21 @@ export function TreatmentDetailsDrawer({
             <p className='text-muted-foreground text-[11px] leading-relaxed'>
               This medical clearance was issued under the direct authority of <strong className='text-foreground'>{treatment.veterinarian || 'Dr. Alice Vance (DVM)'}</strong>. Submitting this record automatically updates the official Animal Registry status.
             </p>
+
+            {/* Recovery Progress Bar */}
+            <div className='space-y-1.5 bg-background/50 p-2.5 rounded-lg border border-emerald-500/10'>
+              <div className='flex items-center justify-between text-[10px] font-bold'>
+                <span className='text-muted-foreground uppercase tracking-wider'>Recovery Progress</span>
+                <span className='text-emerald-600 dark:text-emerald-400 font-mono font-extrabold'>{progress}%</span>
+              </div>
+              <div className='h-2 w-full bg-muted rounded-full overflow-hidden'>
+                <div
+                  className='h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-500'
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            </div>
+
             <div className='pt-1 border-t border-emerald-500/20 flex items-center justify-between text-[11px] font-mono text-emerald-700 dark:text-emerald-300'>
               <span>Registry Status: {animal?.status || 'Recovered'}</span>
               <span>Clearing Vet ID: VET-2026-004</span>

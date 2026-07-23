@@ -45,6 +45,7 @@ import {
   Heart,
 } from 'lucide-react'
 import { getSpeciesPlaceholder } from '@/features/animals/utils/placeholders'
+import { getRecoveryProgress } from '@/features/animals/utils/animal-helpers'
 import { TreatmentStatsHeader } from './components/treatment-stats-header'
 import { TreatmentDetailsDrawer } from './components/treatment-details-drawer'
 
@@ -295,13 +296,7 @@ export function MedicalTreatments() {
     }
   }
 
-  // Recovery Progress % Derivation
-  const getRecoveryProgress = (status?: string, diag?: string) => {
-    if (status === 'Recovered' || status === 'Adopted' || status === 'Released') return 100
-    if (diag?.toLowerCase().includes('surgery') || diag?.toLowerCase().includes('fracture')) return 45
-    if (status === 'Under Treatment') return 70
-    return 85
-  }
+
 
   return (
     <div className='flex-1 space-y-4 p-8 pt-6 max-w-[1600px] mx-auto'>
@@ -487,7 +482,7 @@ export function MedicalTreatments() {
                   (s) => s.id === animal?.shelter_id || String(s.id || '').replace(/^sh-/, '') === rawShelterId
                 )
 
-                const progress = getRecoveryProgress(animal?.status, t.diagnosis)
+                const progress = getRecoveryProgress(animal?.status || 'Intake', animal?.condition)
 
                 return (
                   <TableRow
