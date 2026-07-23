@@ -25,7 +25,9 @@ import {
   Trees,
 } from 'lucide-react'
 import { useRescueHubStore, type Animal } from '@/stores/rescue-hub-store'
+import { useAuthStore } from '@/stores/auth-store'
 import { getSpeciesPlaceholder } from '../utils/placeholders'
+import { toast } from 'sonner'
 
 interface AnimalProfileDialogProps {
   animal: Animal | null
@@ -42,8 +44,29 @@ export function AnimalProfileDialog({
 }: AnimalProfileDialogProps) {
   const store = useRescueHubStore()
   const navigate = useNavigate()
+  const userRole = useAuthStore((state) => state.auth.user?.role?.[0] || 'Rescuer')
 
   if (!animal) return null
+
+  const handleAdoptWorkflow = async () => {
+    try {
+      await store.updateAnimal(animal.id, { status: 'Adopted' })
+      toast.success(`🎉 Adoption workflow finalized! ${animal.name} is now marked as Adopted.`)
+      onOpenChange(false)
+    } catch (e) {
+      toast.error('Failed to complete adoption workflow.')
+    }
+  }
+
+  const handleReleaseWorkflow = async () => {
+    try {
+      await store.updateAnimal(animal.id, { status: 'Released' })
+      toast.success(`🕊️ Habitat release workflow finalized! ${animal.name} is now marked as Released.`)
+      onOpenChange(false)
+    } catch (e) {
+      toast.error('Failed to complete release workflow.')
+    }
+  }
 
   // Robust Linked entities lookup
   const rawAnimalShelterId = (animal.shelter_id || '').replace(/^sh-/, '')
@@ -379,16 +402,36 @@ export function AnimalProfileDialog({
         </div>
 
         {/* Footer Actions */}
-        <DialogFooter className='p-4 bg-muted/20 border-t flex items-center justify-between sm:justify-between'>
+        <DialogFooter className='p-4 bg-muted/20 border-t flex items-center justify-between sm:justify-between gap-2 flex-wrap'>
           <Button variant='outline' onClick={() => onOpenChange(false)} className='text-xs'>
             Close Profile
           </Button>
 
-          {onEditClick && (
-            <Button onClick={onEditClick} className='text-xs gap-1.5 bg-teal-600 hover:bg-teal-700 text-white'>
-              Edit Profile Details
-            </Button>
-          )}
+          <div className='flex items-center gap-2'>
+            {animal.status === 'Recovered' && (userRole === 'Admin' || userRole === 'Shelter Staff') && (
+              ['Bird', 'Reptile', 'Snake', 'Monkey'].includes(animal.species) ? (
+                <Button
+                  onClick={handleReleaseWorkflow}
+                  className='text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold'
+                >
+                  <Trees className='h-3.5 w-3.5' /> Process Habitat Release
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleAdoptWorkflow}
+                  className='text-xs gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold'
+                >
+                  <Home className='h-3.5 w-3.5' /> Process Family Adoption
+                </Button>
+              )
+            )}
+
+            {onEditClick && (
+              <Button onClick={onEditClick} className='text-xs gap-1.5 bg-teal-600 hover:bg-teal-700 text-white'>
+                Edit Profile Details
+              </Button>
+            )}
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

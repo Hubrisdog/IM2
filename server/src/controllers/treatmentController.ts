@@ -9,19 +9,30 @@ export const getTreatments = async (req: Request, res: Response) => {
       orderBy: { created_at: 'desc' }
     })
 
-    const mapped = treatments.map(t => ({
-      id: `trt-${t.id}`,
-      animal_id: `ani-${t.animal_id}`,
-      date: t.created_at.toISOString(),
-      treatment_date: t.created_at.toISOString().split('T')[0],
-      veterinarian: t.vet ? `${t.vet.first_name} ${t.vet.last_name}` : 'Dr. Alice Vance',
-      diagnosis: t.diagnosis || 'General Triage Exam',
-      medication: t.medication || 'None',
-      procedure: t.treatment || 'Checkup',
-      follow_up_date: t.followup_date ? t.followup_date.toISOString().split('T')[0] : null,
-      notes: t.notes || '',
-      created_at: t.created_at.toISOString()
-    }))
+    const mapped = treatments.map(t => {
+      let recommendation = 'Continue Treatment'
+      let cleanNotes = t.notes || ''
+      const match = cleanNotes.match(/^\[Medical Recommendation:\s*([^\]]+)\]\s*(.*)/s)
+      if (match) {
+        recommendation = match[1]
+        cleanNotes = match[2]
+      }
+
+      return {
+        id: `trt-${t.id}`,
+        animal_id: `ani-${t.animal_id}`,
+        date: t.created_at.toISOString(),
+        treatment_date: t.created_at.toISOString().split('T')[0],
+        veterinarian: t.vet ? `${t.vet.first_name} ${t.vet.last_name}` : 'Dr. Alice Vance',
+        diagnosis: t.diagnosis || 'General Triage Exam',
+        medication: t.medication || 'None',
+        procedure: t.treatment || 'Checkup',
+        follow_up_date: t.followup_date ? t.followup_date.toISOString().split('T')[0] : null,
+        notes: cleanNotes,
+        recommendation,
+        created_at: t.created_at.toISOString()
+      }
+    })
 
     res.json(mapped)
   } catch (error: any) {
@@ -162,30 +173,35 @@ export const updateTreatment = async (req: Request, res: Response) => {
       updatedAnimalStatus = 'Under Treatment'
     }
 
-    if (updatedAnimalStatus && currentTreatment.animal) {
-      await prisma.animal.update({
-        where: { id: currentTreatment.animal_id },
-        data: { status: updatedAnimalStatus }
-      })
-    }
-
     const treatmentNotes = recommendation 
       ? `[Medical Recommendation: ${recommendation}] ${notes || ''}`.trim()
       : (notes || '')
 
-    const updated = await prisma.animal_Treatment.update({
-      where: { id: parsedId },
-      data: {
-        diagnosis,
-        medication,
-        treatment: procedure,
-        followup_date: follow_up_date ? new Date(follow_up_date) : undefined,
-        notes: treatmentNotes
-      },
-      include: { vet: true }
+    // Execute multi-query operation atomically inside a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      if (updatedAnimalStatus && currentTreatment.animal) {
+        await tx.animal.update({
+          where: { id: currentTreatment.animal_id },
+          data: { status: updatedAnimalStatus }
+        })
+      }
+
+      const updated = await tx.animal_Treatment.update({
+        where: { id: parsedId },
+        data: {
+          diagnosis,
+          medication,
+          treatment: procedure,
+          followup_date: follow_up_date ? new Date(follow_up_date) : undefined,
+          notes: treatmentNotes
+        },
+        include: { vet: true }
+      })
+
+      return updated
     })
 
-    const vetName = `${updated.vet.first_name} ${updated.vet.last_name}`
+    const vetName = `${result.vet.first_name} ${result.vet.last_name}`
     const actionLog = recommendation
       ? `Veterinary Assessment updated by ${vetName} for ${currentTreatment.animal.name}: Medical Clearance -> ${recommendation}`
       : `Treatment record updated for ${currentTreatment.animal.name}`
@@ -194,7 +210,7 @@ export const updateTreatment = async (req: Request, res: Response) => {
     await prisma.activityLog.create({
       data: {
         entity_type: 'Treatment',
-        entity_id: updated.id,
+        entity_id: result.id,
         action: actionLog,
         user: vetName
       }

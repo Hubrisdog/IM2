@@ -9,7 +9,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Home, Trees, Eye, Building2, Clock, Sparkles } from 'lucide-react'
-import { type Animal, type Shelter } from '@/stores/rescue-hub-store'
+import { type Animal, type Shelter, useRescueHubStore } from '@/stores/rescue-hub-store'
 import { getSpeciesPlaceholder } from '../utils/placeholders'
 import { getDaysInShelter } from '../utils/animal-helpers'
 
@@ -30,16 +30,37 @@ export function ReadyModal({
   shelters,
   onSelectAnimal,
 }: ReadyModalProps) {
+  const store = useRescueHubStore()
   if (!type) return null
 
   const isWild = (species: string) =>
     ['Bird', 'Reptile', 'Snake', 'Monkey'].includes(species)
 
   const filtered = animals.filter((a) => {
+    if (a.status !== 'Recovered') return false
+
+    // 1. Fetch latest treatment recommendation
+    const rawId = String(a.id || '').replace(/^ani-/, '')
+    const animalTreatments = store.treatments.filter(
+      (t) => String(t.animal_id || '').replace(/^ani-/, '') === rawId
+    )
+    
+    let rec: string | null = null
+    if (animalTreatments.length > 0) {
+      const sorted = [...animalTreatments].sort(
+        (x, y) => new Date(y.created_at || y.date).getTime() - new Date(x.created_at || x.date).getTime()
+      )
+      rec = sorted[0].recommendation || null
+    }
+
     if (type === 'adoption') {
-      return a.status === 'Recovered' && !isWild(a.species)
+      if (rec === 'Ready for Adoption') return true
+      if (rec === 'Ready for Release') return false
+      return !isWild(a.species)
     } else {
-      return a.status === 'Recovered' && isWild(a.species)
+      if (rec === 'Ready for Release') return true
+      if (rec === 'Ready for Adoption') return false
+      return isWild(a.species)
     }
   })
 
