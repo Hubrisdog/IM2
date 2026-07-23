@@ -38,9 +38,9 @@ export function ReadyModal({
 
   const filtered = animals.filter((a) => {
     if (type === 'adoption') {
-      return a.status === 'Ready for Adoption'
+      return a.status === 'Ready for Adoption' || (a.status === 'Recovered' && !isWild(a.species))
     } else {
-      return a.status === 'Ready for Release'
+      return a.status === 'Ready for Release' || (a.status === 'Recovered' && isWild(a.species))
     }
   })
 
@@ -95,8 +95,8 @@ export function ReadyModal({
                         </Badge>
                       </div>
                       <div className='absolute bottom-2 left-2 right-2 text-white flex items-center justify-between'>
-                        <Badge className={type === 'adoption' ? 'bg-blue-600 text-white' : 'bg-teal-600 text-white'} variant='secondary'>
-                          {type === 'adoption' ? '🏠 Ready to Adopt' : '🌿 Ready to Release'}
+                        <Badge className={animal.status === 'Recovered' ? 'bg-emerald-600 text-white' : (type === 'adoption' ? 'bg-blue-600 text-white' : 'bg-teal-600 text-white')} variant='secondary'>
+                          {animal.status === 'Recovered' ? '🩺 Medically Cleared' : (type === 'adoption' ? '🏠 Ready to Adopt' : '🌿 Ready to Release')}
                         </Badge>
                         <span className='text-[10px] bg-black/60 px-1.5 py-0.5 rounded font-mono'>
                           {days} Days in Shelter
