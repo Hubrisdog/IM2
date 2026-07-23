@@ -51,7 +51,6 @@ export const createTreatment = async (req: Request, res: Response) => {
     })
 
     if (!vet) {
-      // Find first veterinarian role agent
       const vetRole = await prisma.role.findFirst({ where: { role_name: 'Veterinarian' } })
       vet = await prisma.agent.findFirst({
         where: { role_id: vetRole?.id || 3 }
@@ -74,58 +73,64 @@ export const createTreatment = async (req: Request, res: Response) => {
       updatedAnimalStatus = 'Under Treatment'
     }
 
-    if (updatedAnimalStatus && animal) {
-      await prisma.animal.update({
-        where: { id: parsedAnimalId },
-        data: { status: updatedAnimalStatus }
-      })
-    }
-
     const treatmentNotes = recommendation 
       ? `[Medical Recommendation: ${recommendation}] ${notes || ''}`.trim()
       : (notes || '')
 
-    const treatment = await prisma.animal_Treatment.create({
-      data: {
-        animal_id: parsedAnimalId,
-        vet_agent_id: vet.id,
-        followup_date: follow_up_date ? new Date(follow_up_date) : null,
-        diagnosis: diagnosis || '',
-        treatment: procedure || '',
-        medication: medication || '',
-        notes: treatmentNotes,
-        ticket_id: animal?.ticket_id || null
-      }
-    })
-
-    // Log action
+    const vetId = vet.id
     const vetName = `${vet.first_name} ${vet.last_name}`
-    const actionLog = recommendation
-      ? `Veterinary Assessment by ${vetName} for ${animal ? animal.name : 'Patient'}: Medical Clearance -> ${recommendation}`
-      : `Treatment logged for ${animal ? animal.name : 'Unknown'}: ${treatment.diagnosis}`
 
-    await prisma.activityLog.create({
-      data: {
-        entity_type: 'Treatment',
-        entity_id: treatment.id,
-        action: actionLog,
-        user: vetName
+    // Execute multi-query operation atomically inside a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      if (updatedAnimalStatus && animal) {
+        await tx.animal.update({
+          where: { id: parsedAnimalId },
+          data: { status: updatedAnimalStatus }
+        })
       }
+
+      const treatment = await tx.animal_Treatment.create({
+        data: {
+          animal_id: parsedAnimalId,
+          vet_agent_id: vetId,
+          followup_date: follow_up_date ? new Date(follow_up_date) : null,
+          diagnosis: diagnosis || '',
+          treatment: procedure || '',
+          medication: medication || '',
+          notes: treatmentNotes,
+          ticket_id: animal?.ticket_id || null
+        }
+      })
+
+      const actionLog = recommendation
+        ? `Veterinary Assessment by ${vetName} for ${animal ? animal.name : 'Patient'}: Medical Clearance -> ${recommendation}`
+        : `Treatment logged for ${animal ? animal.name : 'Unknown'}: ${treatment.diagnosis}`
+
+      await tx.activityLog.create({
+        data: {
+          entity_type: 'Treatment',
+          entity_id: treatment.id,
+          action: actionLog,
+          user: vetName
+        }
+      })
+
+      return treatment
     })
 
     res.status(201).json({
-      id: `trt-${treatment.id}`,
-      animal_id: `ani-${treatment.animal_id}`,
-      date: treatment.created_at.toISOString(),
-      treatment_date: treatment.created_at.toISOString().split('T')[0],
+      id: `trt-${result.id}`,
+      animal_id: `ani-${result.animal_id}`,
+      date: result.created_at.toISOString(),
+      treatment_date: result.created_at.toISOString().split('T')[0],
       veterinarian: vetName,
-      diagnosis: treatment.diagnosis,
-      medication: treatment.medication,
-      procedure: treatment.treatment,
-      follow_up_date: treatment.followup_date ? treatment.followup_date.toISOString().split('T')[0] : null,
-      notes: treatment.notes,
+      diagnosis: result.diagnosis,
+      medication: result.medication,
+      procedure: result.treatment,
+      follow_up_date: result.followup_date ? result.followup_date.toISOString().split('T')[0] : null,
+      notes: result.notes,
       recommendation: recommendation || 'Continue Treatment',
-      created_at: treatment.created_at.toISOString()
+      created_at: result.created_at.toISOString()
     })
   } catch (error: any) {
     res.status(500).json({ message: error.message })

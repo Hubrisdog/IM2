@@ -456,17 +456,26 @@ async function main() {
     sh3Count++; return sh3.id
   }
 
+  const dogNames = ['Rocky', 'Coco', 'Lola', 'Buster', 'Duke', 'Daisy', 'Bailey', 'Cooper', 'Sadie', 'Bear', 'Tucker', 'Jack', 'Stella', 'Oliver', 'Zeus', 'Lulu', 'Rusty', 'Roxy', 'Bruno', 'Winston', 'Penny', 'Gus', 'Sam', 'Ruby', 'Dexter', 'Gizmo', 'Harley', 'Loki', 'Hank', 'Rosie', 'Marley']
+  const dogBreeds = ['Labrador Retriever', 'German Shepherd', 'Golden Retriever', 'Aspin', 'Poodle', 'French Bulldog', 'Beagle', 'Rottweiler', 'Boxer', 'Siberian Husky', 'Chihuahua', 'Shih Tzu', 'Terrier Mix', 'Dalmatian', 'Dachshund']
+
+  const catNames = ['Milo', 'Leo', 'Nala', 'Chloe', 'Oliver', 'Lucy', 'Simba', 'Bella', 'Loki', 'Sophie', 'Cleo', 'Ziggy', 'Sassy', 'Gizmo', 'Toby', 'Felix', 'Jasper', 'Smokey', 'Shadow', 'Mittens', 'Oscar', 'Buster', 'Harley', 'Garfield']
+  const catBreeds = ['Domestic Shorthair', 'Persian', 'Siamese', 'Maine Coon', 'Ragdoll', 'Bengal', 'Abyssinian', 'Sphynx', 'British Shorthair', 'Birman']
+
+  const birdNames = ['Pip', 'Sky', 'Echo', 'Flit', 'Sunny', 'Feather', 'Kiwi', 'Mango', 'Chirp', 'Peaches', 'Blue', 'Skye', 'Robin', 'Talon']
+  const birdBreeds = ['Philippine Eagle', 'Cockatiel', 'Lovebird', 'African Grey Parrot', 'Budgerigar', 'Reticulated Python', 'Crested Myna']
+
   // Create remaining Dogs (11 Intake, 7 Under Treatment, 20 Adopted, 5 Released)
   for (let i = 0; i < 11; i++) {
     await prisma.animal.create({
       data: {
-        name: `Dog Intake ${i + 1}`,
+        name: `${dogNames[i % dogNames.length]}`,
         species_id: dog.id,
-        breed: 'Local Breed',
+        breed: dogBreeds[i % dogBreeds.length],
         sex: i % 2 === 0 ? 'Male' : 'Female',
         age_estimate: '2 years',
         weight: 12.0 + i,
-        condition: 'Intake evaluation',
+        condition: 'Found wandering near street market, dehydration.',
         status: 'Intake',
         shelter_id: assignShelter()
       }
@@ -476,13 +485,13 @@ async function main() {
   for (let i = 0; i < 7; i++) {
     await prisma.animal.create({
       data: {
-        name: `Dog Care ${i + 1}`,
+        name: `${dogNames[(i + 11) % dogNames.length]}`,
         species_id: dog.id,
-        breed: 'Labrador Mix',
+        breed: dogBreeds[(i + 5) % dogBreeds.length],
         sex: i % 2 === 0 ? 'Female' : 'Male',
         age_estimate: '3 years',
         weight: 18.0 + i,
-        condition: 'Under medical care',
+        condition: 'Undergoing antibiotic treatment for minor abrasions.',
         status: 'Under Treatment',
         shelter_id: assignShelter()
       }
@@ -492,13 +501,13 @@ async function main() {
   for (let i = 0; i < 20; i++) {
     await prisma.animal.create({
       data: {
-        name: `Adopted Dog ${i + 1}`,
+        name: `Rescue ${dogNames[(i + 18) % dogNames.length]}`,
         species_id: dog.id,
-        breed: 'Huskie Mix',
+        breed: dogBreeds[(i + 9) % dogBreeds.length],
         sex: 'Male',
         age_estimate: '1 year',
         weight: 14.0,
-        condition: 'Healthy',
+        condition: 'Medically cleared, fully recovered.',
         status: 'Adopted',
         shelter_id: sh1.id
       }
@@ -508,13 +517,13 @@ async function main() {
   for (let i = 0; i < 5; i++) {
     await prisma.animal.create({
       data: {
-        name: `Released Dog ${i + 1}`,
+        name: `Wild Dog ${dogNames[(i + 25) % dogNames.length]}`,
         species_id: dog.id,
-        breed: 'Native Dog',
+        breed: 'Askal (Aspin)',
         sex: 'Female',
         age_estimate: '4 years',
         weight: 16.0,
-        condition: 'Rehabilitated',
+        condition: 'Successfully rehabilitated and released back into wild community.',
         status: 'Released',
         shelter_id: sh2.id
       }
@@ -525,13 +534,13 @@ async function main() {
   for (let i = 0; i < 9; i++) {
     await prisma.animal.create({
       data: {
-        name: `Cat Intake ${i + 1}`,
+        name: `${catNames[i % catNames.length]}`,
         species_id: cat.id,
-        breed: 'Domestic Shorthair',
+        breed: catBreeds[i % catBreeds.length],
         sex: 'Female',
         age_estimate: '1 year',
         weight: 3.5,
-        condition: 'Intake evaluation',
+        condition: 'Found stuck in drainage pipe. No major injuries.',
         status: 'Intake',
         shelter_id: assignShelter()
       }
@@ -541,13 +550,13 @@ async function main() {
   for (let i = 0; i < 4; i++) {
     await prisma.animal.create({
       data: {
-        name: `Cat Care ${i + 1}`,
+        name: `${catNames[(i + 9) % catNames.length]}`,
         species_id: cat.id,
-        breed: 'Persian Mix',
+        breed: catBreeds[(i + 3) % catBreeds.length],
         sex: 'Male',
         age_estimate: '2 years',
         weight: 4.0,
-        condition: 'Under treatment',
+        condition: 'Recovering from respiratory infection under observation.',
         status: 'Under Treatment',
         shelter_id: assignShelter()
       }
@@ -557,13 +566,13 @@ async function main() {
   for (let i = 0; i < 15; i++) {
     await prisma.animal.create({
       data: {
-        name: `Adopted Cat ${i + 1}`,
+        name: `Adoptee ${catNames[(i + 13) % catNames.length]}`,
         species_id: cat.id,
-        breed: 'Siamese Mix',
+        breed: catBreeds[(i + 5) % catBreeds.length],
         sex: 'Female',
         age_estimate: '6 months',
         weight: 2.5,
-        condition: 'Healthy',
+        condition: 'Healthy, ready for new home placement.',
         status: 'Adopted',
         shelter_id: sh1.id
       }
@@ -573,9 +582,9 @@ async function main() {
   for (let i = 0; i < 3; i++) {
     await prisma.animal.create({
       data: {
-        name: `Released Cat ${i + 1}`,
+        name: `Released Cat ${catNames[(i + 20) % catNames.length]}`,
         species_id: cat.id,
-        breed: 'Tabby',
+        breed: 'Tabby Mix',
         sex: 'Male',
         age_estimate: '3 years',
         weight: 4.5,
@@ -590,13 +599,13 @@ async function main() {
   for (let i = 0; i < 1; i++) {
     await prisma.animal.create({
       data: {
-        name: `Bird Intake ${i + 1}`,
+        name: `Pip`,
         species_id: bird.id,
-        breed: 'Parrot',
+        breed: 'Cockatiel',
         sex: 'Unknown',
         age_estimate: '1 year',
         weight: 0.5,
-        condition: 'Intake',
+        condition: 'Found exhausted in park. Under active monitoring.',
         status: 'Intake',
         shelter_id: assignShelter()
       }
@@ -606,13 +615,13 @@ async function main() {
   for (let i = 0; i < 2; i++) {
     await prisma.animal.create({
       data: {
-        name: `Bird Care ${i + 1}`,
+        name: `${birdNames[i % birdNames.length]}`,
         species_id: bird.id,
-        breed: 'Eagle',
+        breed: birdBreeds[i % birdBreeds.length],
         sex: 'Unknown',
         age_estimate: '2 years',
         weight: 1.5,
-        condition: 'Wing injury',
+        condition: 'Slight feather loss and minor wing joint sprain.',
         status: 'Under Treatment',
         shelter_id: assignShelter()
       }
@@ -622,13 +631,13 @@ async function main() {
   for (let i = 0; i < 5; i++) {
     await prisma.animal.create({
       data: {
-        name: `Released Bird ${i + 1}`,
+        name: `Forest ${birdNames[(i + 2) % birdNames.length]}`,
         species_id: bird.id,
-        breed: 'Owl',
+        breed: birdBreeds[(i + 2) % birdBreeds.length],
         sex: 'Unknown',
         age_estimate: '3 years',
         weight: 1.2,
-        condition: 'Released to wild',
+        condition: 'Full recovery from head trauma. Released successfully.',
         status: 'Released',
         shelter_id: sh3.id
       }
@@ -643,6 +652,45 @@ async function main() {
 
   const allAnimals = await prisma.animal.findMany()
 
+  const diagnoses = [
+    'Deworming & Parasite Control',
+    'Otitis externa (Ear infection)',
+    'Mild gastroenteritis',
+    'Minor laceration repair',
+    'IV Fluid Therapy for dehydration',
+    'Radiographic Examination (Leg X-ray)',
+    'Rabies Observation quarantine check',
+    'Suture Removal',
+    'Routine feline vaccination booster',
+    'Canine DHPP vaccination'
+  ]
+
+  const treatments = [
+    'Administered oral broad-spectrum dewormer',
+    'Irrigated ear canals and applied topical drops',
+    'Administered antiemetic injection and bland diet instructions',
+    'Cleaned, debrided, and sutured minor skin tear',
+    'Administered subcutaneous saline injection',
+    'Took lateral and ventrodorsal X-rays of right hind leg',
+    'Placed in quiet isolation ward for neurological monitoring',
+    'Safely removed 5 surgical skin sutures',
+    'Administered annual FVRCP vaccine injection',
+    'Administered subcutaneous core vaccination'
+  ]
+
+  const medications = [
+    'Pyrantel Pamoate, Fipronil topical',
+    'Tresaderm drops, Otomax ointment',
+    'Cerenia injection, Metronidazole',
+    'Chlorhexidine scrub, Lidocaine local',
+    'Lactated Ringer\'s Solution 250ml',
+    'Isoflurane sedation (minimal)',
+    'No medication (observation only)',
+    'Antiseptic spray',
+    'FVRCP vaccine booster',
+    'DHPP vaccine booster'
+  ]
+
   // Dr. Alice Vance (vet 1) -> 18 treatments total across 14 unique animals (3 pending followups)
   // Treatment 1 for Dino: Treatment ID 1
   await prisma.animal_Treatment.create({
@@ -655,7 +703,7 @@ async function main() {
       diagnosis: 'Right tibia fracture and severe dehydration',
       treatment: 'Antibiotic treatment & fracture cast applied',
       medication: 'Clavamox 250mg, Subcutaneous IV fluids',
-      notes: 'Cast applied successfully. Patient stable.',
+      notes: 'Cast applied successfully. Patient stable and quiet.',
       created_at: new Date('2026-07-15T11:00:00Z')
     }
   })
@@ -671,10 +719,10 @@ async function main() {
         animal_id: targetAnimal.id,
         vet_agent_id: vet1.id,
         followup_date: isPending ? (i === 0 ? futureDate2 : futureDate3) : pastDate,
-        diagnosis: `Routine veterinary evaluation ${i + 1}`,
-        treatment: 'Vaccination and physical therapy',
-        medication: 'Rabies vaccine, Multivitamins',
-        notes: 'Patient responding well to treatment plan.',
+        diagnosis: diagnoses[i % diagnoses.length],
+        treatment: treatments[i % treatments.length],
+        medication: medications[i % medications.length],
+        notes: 'Responding extremely well to clinical care plan.',
         created_at: new Date('2026-07-16T09:00:00Z')
       }
     })
@@ -691,10 +739,10 @@ async function main() {
         animal_id: targetAnimal.id,
         vet_agent_id: vet2.id,
         followup_date: isPending ? futureDate1 : pastDate,
-        diagnosis: `Clinical checkup ${i + 1}`,
-        treatment: 'Deworming and hygiene care',
-        medication: 'Ivermectin, Topical ointment',
-        notes: 'Regular checkup completed.',
+        diagnosis: diagnoses[(i + 4) % diagnoses.length],
+        treatment: treatments[(i + 4) % treatments.length],
+        medication: medications[(i + 4) % medications.length],
+        notes: 'Patient exhibits normal vital signs during discharge check.',
         created_at: new Date('2026-07-16T14:00:00Z')
       }
     })
