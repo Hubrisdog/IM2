@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import {
   Dialog,
@@ -99,9 +100,16 @@ export function AnimalProfileDialog({
     (c) => c.id === animal.case_id || c.id.replace(/^case-/, '') === rawAnimalCaseId
   )
 
-  const rescuer = rescueCase?.rescuer_id
-    ? store.rescuers.find((r) => r.id === rescueCase.rescuer_id || r.id.replace(/^agt-/, '') === rescueCase.rescuer_id.replace(/^agt-/, ''))
-    : null
+  const rescuer = useMemo(() => {
+    if (!rescueCase?.rescuer_id) return null
+    // Extract team ID prefix format (e.g. res-1 -> team-1)
+    const teamIdStr = rescueCase.rescuer_id.replace(/^res-/, 'team-')
+    const teamRescuers = store.rescuers.filter(
+      (r) => r.team_id === teamIdStr || r.team_id === rescueCase.rescuer_id || r.id === rescueCase.rescuer_id
+    )
+    const actualRescuer = teamRescuers.find((r) => r.role === 'Rescuer')
+    return actualRescuer || teamRescuers[0] || null
+  }, [rescueCase, store.rescuers])
 
   // Robust Latest treatment lookup
   const animalTreatments = store.treatments
