@@ -212,6 +212,17 @@ export function MedicalTreatments() {
     })
   }, [store.treatments, store.animals, store.shelters, search, chipFilter, vetFilter])
 
+  // Find animals that have status 'Under Treatment' or 'Intake' but NO recorded treatments
+  const pendingExamAnimals = useMemo(() => {
+    return store.animals.filter((a) => {
+      const rawAnimId = String(a.id || '').replace(/^ani-/, '')
+      const hasTreatments = store.treatments.some(
+        (t) => String(t.animal_id || '').replace(/^ani-/, '') === rawAnimId || t.animal_id === a.id
+      )
+      return (a.status === 'Under Treatment' || a.status === 'Intake') && !hasTreatments
+    })
+  }, [store.animals, store.treatments])
+
   // Pagination calculations
   const totalItems = filteredTreatments.length
   const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage))
@@ -314,6 +325,71 @@ export function MedicalTreatments() {
 
       {/* 1. Summary Statistics Header */}
       <TreatmentStatsHeader treatments={store.treatments} />
+
+      {/* 2. Pending Veterinary Examination Queue */}
+      {pendingExamAnimals.length > 0 && (
+        <div className='bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-transparent p-5 rounded-2xl border border-emerald-500/20 shadow-md space-y-3.5 transition-all duration-300 animate-in slide-in-from-top-4 duration-500'>
+          <div className='flex items-center justify-between'>
+            <div className='space-y-0.5'>
+              <h3 className='text-sm font-black tracking-tight text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 uppercase'>
+                🩺 Queue: Patients Pending Intake Examination ({pendingExamAnimals.length})
+              </h3>
+              <p className='text-xs text-muted-foreground'>
+                These rescued animals are marked as Intake/Under Treatment but have no clinical medical log created yet.
+              </p>
+            </div>
+          </div>
+
+          <div className='flex gap-4 overflow-x-auto pb-2 no-scrollbar'>
+            {pendingExamAnimals.map((animal) => (
+              <div
+                key={animal.id}
+                className='flex items-center gap-3 bg-card p-3 rounded-xl border border-emerald-500/10 shadow-sm shrink-0 w-[280px] hover:border-emerald-500/30 transition-all group'
+              >
+                <img
+                  src={animal.photo_url || getSpeciesPlaceholder(animal.species)}
+                  alt={animal.name}
+                  className='h-12 w-12 rounded-lg object-cover border bg-slate-800 shrink-0'
+                />
+                <div className='overflow-hidden flex-1 min-w-0 space-y-1'>
+                  <div className='font-bold text-xs text-foreground truncate group-hover:text-emerald-500 transition-colors'>
+                    {animal.name}
+                  </div>
+                  <div className='text-[10px] text-muted-foreground truncate'>
+                    {animal.species} • {animal.breed}
+                  </div>
+                  <div className='flex items-center justify-between pt-0.5'>
+                    <Badge className='text-[9px] font-bold px-1.5 py-0 bg-orange-500/10 text-orange-600 border-orange-500/20' variant='outline'>
+                      {animal.status}
+                    </Badge>
+                    {(userRole === 'Admin' || userRole === 'Veterinarian') && (
+                      <Button
+                        size='sm'
+                        variant='ghost'
+                        className='h-6 px-2 text-[10px] font-bold text-emerald-600 hover:bg-emerald-500/15 border border-emerald-500/20 hover:border-transparent rounded-md gap-0.5 transition-all'
+                        onClick={() => {
+                          setAnimalId(animal.id)
+                          setVeterinarian(store.rescuers.find((r) => r.role === 'Veterinarian')?.name || 'Dr. Alice Vance')
+                          setDiagnosis('')
+                          setProcedure('Intake Physical Exam')
+                          setMedication('')
+                          setTreatmentDate(new Date().toISOString().split('T')[0])
+                          setFollowUpDate('')
+                          setNotes('')
+                          setRecommendation('Continue Treatment')
+                          setIsAddOpen(true)
+                        }}
+                      >
+                        Log Exam
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Quick Filter Chips & Toolbar */}
       <div className='space-y-3 bg-card p-3 rounded-xl border shadow-sm'>
