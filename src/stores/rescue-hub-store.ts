@@ -151,7 +151,7 @@ interface RescueHubState {
   addIncident: (incident: Omit<IncidentReport, 'id' | 'created_at'>) => void
   updateIncident: (id: string, incident: Partial<IncidentReport>) => void
   deleteIncident: (id: string) => void
-  promoteIncidentToCase: (id: string, rescuerId?: string, shelterId?: string) => void
+  promoteIncidentToCase: (id: string, rescuerId?: string | null, shelterId?: string | null) => Promise<string | null>
 
   // Cases CRUD
   addCase: (rescueCase: Omit<RescueCase, 'id' | 'created_at' | 'case_number'>) => void
@@ -306,14 +306,20 @@ export const useRescueHubStore = create<RescueHubState>()((set, get) => {
 
     promoteIncidentToCase: async (id, rescuerId, shelterId) => {
       try {
-        await fetch(`http://localhost:5000/api/incidents/${id}/promote`, {
+        const res = await fetch(`http://localhost:5000/api/incidents/${id}/promote`, {
           method: 'POST',
           headers: getHeaders(),
           body: JSON.stringify({ rescuerId, shelterId })
         })
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}))
+          return errData.message || 'Failed to promote incident report.'
+        }
         get().fetchInitialData()
-      } catch (e) {
+        return null
+      } catch (e: any) {
         console.error(e)
+        return e.message || 'Failed to connect to the server.'
       }
     },
 

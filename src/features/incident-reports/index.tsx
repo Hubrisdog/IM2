@@ -142,11 +142,11 @@ export function IncidentReports() {
     setIsPromoteOpen(true)
   }
 
-  const handlePromoteSubmit = (e: React.FormEvent) => {
+  const handlePromoteSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedIncident) return
 
-    const err = store.promoteIncidentToCase(selectedIncident.id, rescuerId || null, shelterId || null)
+    const err = await store.promoteIncidentToCase(selectedIncident.id, rescuerId || null, shelterId || null)
     if (err) {
       toast.error(err)
       return
